@@ -1,0 +1,725 @@
+# Admin app feature checklist
+
+This file lists every behaviour of the panel's app mode that the native Flutter admin app must keep, with heading sources relative to `web/src` unless they start with `lib/features` (Flutter project) or `supabase` (`web/supabase`).
+
+## Sign in and session [components/admin/AdminApp.tsx, components/admin/LoginScreen.tsx, lib/store/admin.ts, hooks/useAuthUser.ts, lib/features/auth]
+
+- [ ] On start, a saved session opens the app straight away and the server check runs alongside it
+- [ ] No saved session shows the sign-in screen
+- [ ] Sign-in screen shows the logo, "Premium Store", the tagline "ADMIN", card title "Sign in", and "Use your admin email and password."
+- [ ] Email field label "Email", email keyboard, autocorrect off, next action moves to Password
+- [ ] Email typing removes all whitespace and cuts at 80 characters
+- [ ] Password field label "Password", hidden by default, eye button shows and hides it, done action submits
+- [ ] Any typing in either field clears the error
+- [ ] Empty email or password shows "Please enter your email and password."
+- [ ] Invalid email shows "Please enter a valid email address." (pattern `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+- [ ] Password under 6 characters shows "Password must be at least 6 characters."
+- [ ] Sign in button is disabled while busy and shows a spinner ("Signing in…" on the web)
+- [ ] Email is trimmed and lower-cased before `signInWithPassword`
+- [ ] Wrong credentials show "Incorrect email or password."
+- [ ] Network failure during sign-in shows "No internet connection. Please try again."
+- [ ] After sign-in, read `admins.user_id` for the user; no row signs out and shows "This account does not have admin access."
+- [ ] An "unknown" answer (no connection) keeps the sign-in and checks again later
+- [ ] Sign-in screen stays light in dark mode
+- [ ] "Forgot password?" opens `https://premiumstore.online/admin` in the external browser (current app behaviour)
+- [ ] Web reset step 1: title "Reset admin password", text "Enter the admin email. We will send a code to it.", field "Admin email", button "Send code" ("Sending…" while busy), link "Back to sign in"
+- [ ] Web reset step 1 posts `{email}` (trimmed, lower-case) to `POST /api/admin-reset`
+- [ ] Reset errors: no response "Could not send the code. Please check your internet and try again."; 403 "This email cannot reset the admin password."; 429 "A code was sent a moment ago. Please wait a minute and try again."; other "Could not send the code right now. Please try again in a few minutes."
+- [ ] Web reset step 2: text "We sent a code to {email}. Enter it with your new password.", fields Code, New password, Confirm new password, button "Save new password" ("Saving…" while busy)
+- [ ] Code field keeps digits only, max 10; must match `^\d{6,10}$` or shows "Enter the code from the email."
+- [ ] New password under 6 shows "Password must be at least 6 characters."; mismatch shows "The two passwords do not match."
+- [ ] Reset uses a temporary client with no saved session: `verifyOtp(type: email)`, then checks `admins`, then `updateUser({password})`, then signs out
+- [ ] Reset errors: bad code "This code is wrong or has expired. Please request a new one."; not admin "This account does not have admin access."; `same_password` "Your new password must be different from your current password. Please choose another one."; other "Could not save the new password. Please try again."
+- [ ] Reset success returns to sign-in with the green notice "Your password has been changed. Sign in with the new password." and clears the password
+- [ ] Access check runs on every open: `auth.getUser()` and `admins` select go out together
+- [ ] A 4xx auth error signs out locally and returns to the sign-in screen
+- [ ] A network or server error on the check returns "unknown" and retries every 5 seconds; it never signs the admin out
+- [ ] Admin confirmed earlier on this device stays in during "unknown" (stored user id, web key `premium-store-admin-confirmed`)
+- [ ] Confirmed result is saved; a "not admin" result removes it
+- [ ] Not yet confirmed and not remembered shows "Loading admin panel…" with "If this takes long, please check your internet connection."
+- [ ] Sync runs only while the panel is allowed; when the sign-in screen shows, sync stops so the next sign-in loads fresh
+- [ ] Loading screen shows the logo, spinner and "Loading admin panel…" until the first data load is done
+- [ ] After 10 seconds of loading, show the internet hint and a "Sign in again" button that signs out
+- [ ] Any `signedOut` auth event returns to the sign-in screen
+- [ ] Sign out asks first: title "Sign out?", text "You will need your email and password to open the admin panel again.", buttons "Cancel" and "Sign out"
+- [ ] Sign out order: delete this phone's `admin_devices` row and FCM token, clear local data, then `auth.signOut()`
+- [ ] Sign out clears the admin profile held in memory and removes the device data cache
+- [ ] No `premiumStoreSignIn` bridge or second sign-in: the native app has one session only
+
+## Shell and navigation [components/admin/AdminShell.tsx, components/admin/navigation.ts, components/admin/layout/AppTopBar.tsx, components/admin/layout/AppInboxCount.tsx, components/admin/layout/AdminStatusAvatar.tsx, components/admin/ui/SignalButton.tsx, components/admin/ui/ExpandingSearch.tsx, components/admin/ui/Modal.tsx, components/admin/ui/ConfirmDialog.tsx, hooks/useBackButton.ts, hooks/useCategorySwipe.ts, hooks/useTabBar.ts, hooks/useSignal.ts, hooks/useAdminTheme.ts, lib/appMode.ts, lib/features/home]
+
+- [ ] Sections: dashboard, inbox, bot, settings as tabs; customers and search as inner screens
+- [ ] Start section is dashboard
+- [ ] Navigation target carries section, inbox tab, bot filter, customerId and rejectOrderId
+- [ ] A target whose section is not a tab falls back to dashboard when it comes from outside (notifications)
+- [ ] Floating tab bar: Dashboard, Inbox, Bot, Settings, max width 330, height 64, pill shape, bottom 16 above the safe area
+- [ ] Tab bar colours: gradient `#2A3550` to `#141A28`, selected pill white 12%, selected icon and label orange `#F5871F`, others white
+- [ ] Selected pill slides between tabs in 300 ms
+- [ ] Inbox tab shows a red `#EF4444` badge with pending + open app issues, hidden when 0 and when Inbox is selected
+- [ ] Badge shows "99+" above 99
+- [ ] Tab bar hides on chat, settings sub-screens, Customers and Search (slide 320 ms, fade 220 ms)
+- [ ] Tab bar hides while any dialog is open
+- [ ] Content keeps 92 px bottom space on screens with the tab bar
+- [ ] Top bar shows only on Dashboard and Search: logo pill, "Premium Store", status dot and label
+- [ ] Status label uses the effective status: Active (emerald-500), Away (amber-400), Away · Closed (orange-500), Offline (zinc-400), recomputed every 60 seconds
+- [ ] Top bar search opens by expanding (300 ms); placeholder "Search codes, customers, orders…"
+- [ ] Typing a non-empty query moves to the Search section
+- [ ] Closing search clears the query and returns to Dashboard
+- [ ] Navigating to anything other than Search clears the search query
+- [ ] Inbox, Bot chat and Customers use a section header: title, expanding search, signal button
+- [ ] Section header search default placeholder "Number, ID, name, plan or code"; closing it clears the query
+- [ ] Signal button on Dashboard, Search, Inbox, Bot chat, Customers and Settings home
+- [ ] Signal check pings `{supabaseUrl}/auth/v1/health` with the `apikey` header every 10 seconds, timeout 5 seconds
+- [ ] Signal also runs on connectivity change and on return to the app; it skips while hidden
+- [ ] Signal bars by reply time: under 200 ms 5, under 400 ms 4, under 800 ms 3, under 1500 ms 2, else 1; no reply or offline 0
+- [ ] Signal levels: 0 "No internet" `#ef4444`, 1 "Very weak" `#ef4444`, 2 "Weak" `#f97316`, 3 "Okay" `#D4A551`, 4 "Good" `#22c55e`, 5 "Strong" `#22c55e`
+- [ ] Zero bars shows a red "!" on the button
+- [ ] Tapping the signal button shows "{level} connection" and "Store replied in {ms} ms" or "Can't reach the store"; it closes after 3 seconds
+- [ ] Back closes the top layer first: image viewer, dialog, details, settings page, settings section, chat
+- [ ] Back from any other section returns to Dashboard
+- [ ] Back on Dashboard leaves the app
+- [ ] Swipe needs at least 60 px horizontally and horizontal distance at least 1.5 times vertical; ignored inside dialogs
+- [ ] Dashboard: swipe left goes to Inbox
+- [ ] Inbox: swipe moves through tabs; before the first tab goes to Dashboard, after the last tab goes to Bot chat
+- [ ] Bot chat: swipe moves through filters; before the first goes to Inbox on its last tab, after the last goes to Settings
+- [ ] Settings home: swipe right goes to Bot chat on the Inactive filter
+- [ ] Tab change slides from the right when moving forward and from the left when moving back
+- [ ] Chips scroll so the selected chip is centred
+- [ ] Dialog: dim backdrop `#061639` at 50%, tap outside closes, X closes, Back closes
+- [ ] Dialog sits near the top on phones (64 px) and stays above the keyboard with its buttons in view
+- [ ] Confirm dialog default title "Are you sure?", left button "No, go back", right button is the confirm label, primary navy or danger red
+- [ ] Theme: light by default, saved on the device (web key `premium-store-admin-theme`)
+- [ ] Status bar and navigation bar colours follow the theme
+- [ ] Dark mode colours match the panel: card `#161a22`, chat `#12161d`, soft blue `#1c2440`, navy fill `#344c8a`, chart bar `#5b74b3`
+- [ ] WhatsApp links and external links open outside the app
+- [ ] Payment issue timer runs in the shell, whichever screen is open (see Data and sync)
+- [ ] Server refusal notice shows over every screen (see Data and sync)
+- [ ] Not in app mode, do not build: side menu, notification bell, in-app toasts, alert sound, connection bar, "Open customer chat" link
+
+## Dashboard [components/admin/dashboard/AppDashboard.tsx, components/admin/inbox/inboxItems.ts]
+
+- [ ] Everything fits on one phone screen above the tab bar, no scroll
+- [ ] Values refresh every 30 seconds and on any data change
+- [ ] Hero card navy gradient `#0C2660` to `#1B3A85`, gold ring decoration `#D4A551`, round gold arrow
+- [ ] Hero pill: pending above 0 shows red dot and "Needs your review"; 0 shows emerald dot and "All caught up"
+- [ ] Hero main line "{n} payment" when 1, "{n} payments" otherwise, the word in gold
+- [ ] Hero second line "waiting for verification"
+- [ ] Hero tap opens Inbox on Pending
+- [ ] Stat "Pending orders" dot `#ff5d7d`: orders with status pending_review or rejected; tap opens Inbox on Pending
+- [ ] Stat "App issues" dot `#ffb02e`: tickets open with kind support; tap opens Inbox on App issues
+- [ ] Stat "Active chats" dot `#22c55e`: same count as the Bot chat filter; tap opens Bot chat on Active chats
+- [ ] Stat "Active orders" dot `#0a84ff`: same count as the Bot chat filter; tap opens Bot chat on Active orders
+- [ ] Chart title "Completed orders", subtitle "Last 7 days · {total} orders"
+- [ ] Green pill "{today count} today" with a trending icon
+- [ ] Seven bars, oldest left, last labelled "Today", others short weekday (en-GB: Mon, Tue)
+- [ ] Day count: orders with status completed and `reviewedAt` inside that day
+- [ ] Day starts at midnight in the device time zone (web behaviour, unlike the rest of the app)
+- [ ] Scale top is the larger of 4 and the highest count
+- [ ] Bar height is `max(6%, count / top)`; track `#eef1f7`
+- [ ] Today is picked by default; tapping a bar picks it
+- [ ] Picked bar navy with a dark bubble showing the count; other bars `#c7d2ec`; picked label dark, others zinc-400
+- [ ] Chart keeps at least 180 px height
+- [ ] Customer list card: three decorative letters K, A, T, title "Customer list", "{n} customers · tap to see all", chevron; tap opens Customers
+- [ ] Customer count is all rows in `customers`
+
+## Inbox [components/admin/inbox/AppInbox.tsx, components/admin/inbox/AppInboxCard.tsx, components/admin/inbox/CategoryChips.tsx, components/admin/inbox/inboxItems.ts, components/admin/inbox/ApproveDialog.tsx, components/admin/inbox/RejectDialog.tsx, components/admin/inbox/ReplyDialog.tsx, components/admin/inbox/Inbox.tsx, hooks/useShowMore.ts, lib/store/admin.ts]
+
+- [ ] Title "Inbox", search, signal button, chip row
+- [ ] Tab names and order come from `settings.inboxTabs`
+- [ ] Default tab is the first in `inboxTabs`, or the tab in the navigation target
+- [ ] Time values refresh every 15 seconds
+- [ ] Chip dots and card accents: pending `#ff5d7d`, issues `#ffb02e`, completed `#00a884`, unused `#7f66ff`, blocked `#ef4444`
+- [ ] Selected chip navy with white text; unselected white with a zinc border
+- [ ] Chip count hidden at 0
+- [ ] Count colours: selected gold `#D4A551` on navy; Pending and App issues red with white text; others `#eef1f7` with navy text
+- [ ] Counts: pending = orders pending_review or rejected; issues = open support tickets; completed = always 0; unused = completed orders with `codeUnused`; blocked = blocked customers
+- [ ] Pending list: pending_review and rejected, newest `submittedAt ?? createdAt` first
+- [ ] App issues list: open tickets with kind support only, newest first
+- [ ] Open payment tickets never show in an Inbox tab, only in the customer details
+- [ ] Completed list: completed orders with `codeUnused` false, newest `reviewedAt` first
+- [ ] Unused list: completed orders with `codeUnused` true, newest `reviewedAt` first
+- [ ] Blocked list: blocked customers, newest `blockedAt ?? lastSeenAt` first
+- [ ] Search matches title, tag, subtitle, sender name and code, lower-cased, trimmed
+- [ ] Empty with a search: "Nothing here", "No match for your search."
+- [ ] Empty Pending: "Nothing here", "No payments are waiting for review."
+- [ ] Empty App issues: "No open app issues."
+- [ ] Empty Completed: "Completed orders will show here."
+- [ ] Empty Unused: "No unused codes right now."
+- [ ] Empty Blocked: "No blocked customers."
+- [ ] Lists show 30 cards and load 30 more when within 400 px of the end; reset when tab or search changes
+- [ ] Card: white, radius 20, left accent strip in the tab colour
+- [ ] Tapping avatar, name row or text opens the chat for that customer
+- [ ] Name row: number tag, title, time, unread dot
+- [ ] Title is WhatsApp number, or email for older accounts; bold when unread
+- [ ] Unread: Pending only for pending_review; App issues always; Completed, Unused and Blocked never
+- [ ] Time: pending `submittedAt ?? createdAt`; issues `createdAt`; completed and unused `reviewedAt ?? createdAt`; blocked `blockedAt ?? lastSeenAt`
+- [ ] Pending line: sender name · plan · amount · method, leaving out what is missing
+- [ ] Rejected order note in red: "Rejected: {reason}"
+- [ ] Pending badge amber "waiting {timeAgo without ago}"; none on rejected orders
+- [ ] Issue note: ticket message, two lines max
+- [ ] Issue badge red "Open · {ticket id}"
+- [ ] Completed and Unused line: plan name, or "{plan} · Code not sent yet"
+- [ ] Code chip next to the plan: dashed gold border, amber fill, monospace bold
+- [ ] Screenshot thumbnail 40 px, tap to zoom; shows order screenshot or ticket screenshot, hidden when a code chip shows
+- [ ] Blocked note in red: reason, or "No reason given", two lines max
+- [ ] Pending buttons: Approve (navy), Reject (red-50), Cancel (amber-50)
+- [ ] Issue buttons: Resolved (navy), Reply (soft)
+- [ ] Completed with code: "Mark as unused" (soft); without code: "Open chat to send code" opens the chat
+- [ ] Unused: "Mark as used" (violet)
+- [ ] Blocked: "Unblock" (red-600)
+- [ ] Approve dialog title "Approve payment", description "{order id} · {plan} · {customer title}"
+- [ ] Approve field "Code message", 6 rows, max 800, placeholder "Paste the message from your portal", focused on open
+- [ ] Code is looked for on every change using the code rule (see Rules that must match the web)
+- [ ] Code found shows "Code found: {code}"
+- [ ] No code shows a red box "No code found, please type the code" with an input, letters and digits only, max 6, placeholder "6-character code"
+- [ ] Duplicate check runs on a valid code and shows "Code {code} was already sent to {email} on {date time}. A code can only be sent once, please use a new code."
+- [ ] Approve & send (emerald) is enabled only with a non-empty message, a 6-character code and no duplicate
+- [ ] Cancel button closes the dialog
+- [ ] approveOrder writes `orders`: status completed, reviewed_at now, code, code_unused false
+- [ ] approveOrder inserts `messages`: sender admin, kind code, text = the pasted message, order_id
+- [ ] approveOrder writes `conversations`: active_order_id null if it was this order, stage code_delivered, unread_by_admin 0, last_message_at
+- [ ] approveOrder sets `notifications.read` true for all of this customer's rows
+- [ ] Reject dialog title "Reject payment", description "{order id} · the customer will see this reason"
+- [ ] Reject options: `settings.rejectReasons` plus "Write a reason"; first option selected; selected style red
+- [ ] "Write a reason" shows a focused input, max 150, placeholder "Type the reason"
+- [ ] Reject button disabled until the trimmed reason is not empty
+- [ ] rejectOrder writes `orders`: status rejected, reject_reason, reviewed_at now
+- [ ] rejectOrder inserts `messages`: sender bot, kind text, `settings.rejectionMessage` with {order_id} and {reason} replaced
+- [ ] rejectOrder writes `conversations`: active_order_id null if this order, stage rejected, unread_by_admin 0, last_message_at
+- [ ] rejectOrder sets `notifications.read` true for this customer
+- [ ] Opening with `rejectOrderId` shows the Reject dialog straight away, only if that order is pending_review or rejected
+- [ ] Cancel dialog text "{order id} will move to Cancelled and {customer title} can create a new order.", confirm "Yes, cancel order" (danger)
+- [ ] cancelOrderAsAdmin works only on pending_review or rejected
+- [ ] cancelOrderAsAdmin writes `orders`: status cancelled, reject_reason "Cancelled by admin", reviewed_at now
+- [ ] cancelOrderAsAdmin inserts `messages`: sender bot, text from `orderCancelledByAdmin` with {order_id}
+- [ ] cancelOrderAsAdmin writes `conversations`: active_order_id null if this order, stage menu, unread_by_admin 0, last_message_at
+- [ ] cancelOrderAsAdmin sets `notifications.read` true for this customer
+- [ ] Mark dialog text "Code {code} will be marked as unused." or "...as used.", confirm "Yes, mark as unused" or "Yes, mark as used"
+- [ ] setCodeUnused writes `orders.code_unused` only
+- [ ] Resolve dialog text "{ticket id} will be closed and the customer will be told it is resolved.", confirm "Yes, resolve"
+- [ ] Support setTicketResolved writes `tickets.status` resolved
+- [ ] Support setTicketResolved inserts bot `messages` from `issueResolvedByAdmin` with {ticket_id}
+- [ ] Support setTicketResolved moves stage waiting_agent, agent_replied or live to menu, and writes last_message_at
+- [ ] Reply dialog title "Reply", description "Write a message, attach images, or both."
+- [ ] Reply field focused, 4 rows, max 1000, placeholder "Type your reply"
+- [ ] Reply attachments: up to 3, 64 px thumbnails, X removes one, add tile hidden at 3
+- [ ] Send reply disabled when empty or busy; shows "Sending…"
+- [ ] Reply sends the text first with `ticketReply` true, then each image with `ticketReply` true
+- [ ] A failed image shows the error, keeps the dialog open and stops
+- [ ] Unblock dialog text "{email} will be able to use the chat again.", confirm "Yes, unblock"
+- [ ] Phone layout only: chat and list never show side by side
+
+## Chat [components/admin/inbox/ChatThread.tsx, components/admin/inbox/ThreadMessage.tsx, components/admin/inbox/ReplyBox.tsx, components/admin/inbox/CustomerPanel.tsx, components/admin/inbox/OrderReview.tsx, components/admin/inbox/TicketCard.tsx, components/admin/inbox/MessageTicks.tsx, components/admin/inbox/MessageTime.tsx, components/StoredImage.tsx, hooks/useFloatingDay.ts, lib/store/admin.ts]
+
+- [ ] Chat opens over the list and hides the tab bar
+- [ ] Opening a chat, and every new message while open, runs markConversationRead
+- [ ] markConversationRead writes only when something is unread: `conversations.unread_by_admin` 0 and `notifications.read` true for this customer
+- [ ] Header: round back button, avatar 46, title, "{number} · Active now" or "{number} · Away from chat", "Details" button
+- [ ] Active state recomputed every 30 seconds
+- [ ] Chat background `#f7f8fa`
+- [ ] Older history: if not ready, load all messages for this customer and show "Loading messages…"
+- [ ] Empty thread shows "No messages yet."
+- [ ] Scroll to bottom on open and whenever the message count changes
+- [ ] Day divider pill above the first message of each Pakistan day
+- [ ] Day label: Today, Yesterday, weekday under 7 days, then "23 Oct 2026"
+- [ ] Scrolling shows a floating day pill at the top; it fades 1.5 seconds after scrolling stops
+- [ ] Group ends when the next message has another sender, is over 5 minutes later, or is on another Pakistan day
+- [ ] Time row shows only on the last message of a group; 16 px gap after a group, 4 px inside
+- [ ] Customer bubble: left, white, max 72% width
+- [ ] Admin bubble: right, navy, white text
+- [ ] Bot bubble: right, `#e9edf5`, zinc-600 text, meta "Auto-reply ·"
+- [ ] Line breaks in text are kept
+- [ ] Tapping a time switches between time and full date
+- [ ] Admin ticks: seen double sky-500; delivered double zinc-400; otherwise single zinc-400
+- [ ] Ticks on admin text, code and image messages only
+- [ ] `emailed_to` set shows "· emailed" with a mail icon
+- [ ] kind payment with its order: centred note "Order {id} created · {plan} · {amount} · {method}"; without the order it falls back to a text bubble
+- [ ] kind steps: centred note "Payment steps shown to customer"
+- [ ] kind instructions: centred note "Code activation instructions sent"
+- [ ] kind code: right navy bubble, header "Code sent · {order code}", text, time and ticks always shown
+- [ ] kind proof: left image card, title "Payment proof", "From {sender or N/A} · {time}", image from the order screenshot
+- [ ] kind deleted: right dashed pill "You deleted this message · {time}"
+- [ ] kind image from customer: left card titled "Screenshot"
+- [ ] kind image from admin: right card titled "You sent an image" with ticks
+- [ ] Image card shows "Removed" when the file path is gone
+- [ ] Images use signed URLs from the `screenshots` bucket, valid 1 hour, cached 55 minutes; a grey pulse shows while loading
+- [ ] Tap an image for a full-screen viewer on 85% black; X or tap outside closes
+- [ ] `data:` paths display directly
+- [ ] Delete button (trash) shows only on admin messages of kind text or image, never on code
+- [ ] Delete confirm text "The customer will see “This message has been deleted”.", confirm "Yes, delete" (danger)
+- [ ] deleteAdminMessage updates `messages`: kind deleted, text empty, image null
+- [ ] deleteAdminMessage then removes the file from `screenshots`, ignoring failure
+- [ ] Reply box: text field max 1000, placeholder "Type a message or code…", grows up to 200 px
+- [ ] Reply box placeholder "Sending image…" while uploading
+- [ ] Hardware Enter sends, Shift+Enter makes a new line
+- [ ] Send button navy, disabled when the trimmed text is empty; sending clears the field and closes quick replies
+- [ ] Quick replies button toggles a chip list, navy while open
+- [ ] Empty quick replies are left out; tapping one sends it at once
+- [ ] Image button picks one image, disabled while uploading
+- [ ] Non-image files are ignored
+- [ ] Image prepare: longest side 1000 px, JPEG quality 0.72, white background
+- [ ] One-colour or empty result counts as failed; then the original JPG, PNG or WebP under 1 MB is sent
+- [ ] Image errors: "This picture is not on your phone yet. Open it in your gallery first, then choose it again."; "This picture couldn't be opened. Please choose a PNG or JPG screenshot, or update your browser."; "This picture is too large. Please choose a screenshot under 1 MB, or update your browser."; "This picture couldn't be opened. Please choose it again."
+- [ ] Upload path `{customerId}/{id}.{jpg|png|svg}` in the `screenshots` bucket; upload failure shows "Could not upload the image. Please try again." in red
+- [ ] sendAdminImage inserts `messages`: sender admin, kind image, text "Image", image path
+- [ ] sendAdminMessage inserts `messages`: sender admin, kind text, trimmed text, and writes last_message_at
+- [ ] Code in a sent message: `codeOnOwnLine(text)` or the first `extractCodes(text)` value
+- [ ] With a code, write it to the latest completed order without a code, otherwise to the latest completed order
+- [ ] Every reply sets `conversations.unread_by_admin` 0
+- [ ] Stage after reply with a code: code_delivered
+- [ ] Stage after ticket reply with an open support ticket: agent_replied
+- [ ] Stage after chat reply with an open support ticket: stays agent_replied, otherwise waiting_agent
+- [ ] Stage after reply with a pending_review order: active_order_id = that order, stage awaiting_payment
+- [ ] Stage otherwise: live, unless the stage is awaiting_payment or rejected
+- [ ] Images follow the same stage rules with no code
+- [ ] Details opens as a full panel over the chat with a round X; Back closes it
+- [ ] Details header: avatar 72, number tag, WhatsApp link when present, email, "Customer since {date}"
+- [ ] Details stats: "Completed orders" count and "Issues resolved" count (resolved tickets of any kind)
+- [ ] Details order cards: pending_review and rejected first, then completed, each newest first
+- [ ] Details leaves out awaiting_payment, cancelled and expired orders
+- [ ] Details shows every open ticket, including payment tickets
+- [ ] Blocked strip: "Blocked: {reason}", or "No reason given"
+- [ ] Block or Unblock button at the bottom, full width
+- [ ] Order card header "Pending order" or "Completed order", order id, status chip
+- [ ] Status chips: awaiting_payment "Awaiting payment" sky; pending_review "Pending order" orange; completed "Completed" emerald; rejected "Rejected" red; issue_reported "Payment issue" red; expired "Expired" gray; cancelled "Cancelled" gray
+- [ ] Order rows: Plan, Sender name (or "Not sent yet"), Screenshot (64 px, zoom, or "None")
+- [ ] Completed order row "Code sent": code message time, else `reviewedAt`, or "Not sent yet" with no code
+- [ ] Other orders row "Submitted": date time or "Not sent yet"
+- [ ] Row "Code" in bold navy when there is a code
+- [ ] Rejected note: "Rejected: {reason}. The customer can reply once and can’t place a new order until you approve or cancel this one."
+- [ ] Pending order buttons: Approve full width (emerald-600), Reject (`#b84a45`), Cancel (amber); same dialogs as Inbox
+- [ ] Completed with no code: green note "Approved {date time}. Type the premium code in the chat to send it."
+- [ ] Completed with code: "Mark as unused" neutral or "Mark as used" violet-600, full width
+- [ ] Ticket card header "App issue" or "Payment issue", ticket id, chip amber while open
+- [ ] Ticket card body: message, screenshot 64 px, "Order" row when linked, "Submitted" date time
+- [ ] Open support ticket: Reply and Resolved
+- [ ] Open payment ticket: Resolved only
+- [ ] Payment setTicketResolved writes `tickets.status` resolved and `customers.payment_blocked_until` null
+- [ ] Payment setTicketResolved inserts bot `messages` from `paymentIssueResolved`
+- [ ] Payment setTicketResolved moves stage waiting_agent to menu only
+
+## Bot chat [components/admin/inbox/AppBotChat.tsx, components/admin/inbox/inboxItems.ts, components/admin/inbox/Inbox.tsx]
+
+- [ ] Title "Bot chat", search, signal button, chip row
+- [ ] Filters in order with dots: Active chats `#22c55e`, Active orders `#0a84ff`, Cancelled `#c38763`, Inactive `#9ca3af`
+- [ ] Default filter Active chats, or the filter in the navigation target
+- [ ] Counts hidden at 0; never the red urgent style
+- [ ] Active chats: conversations with at least one loaded message whose customer is active, newest activity first
+- [ ] Inactive: same list for customers not active, newest activity first
+- [ ] Chat row time is `lastActivityAt`, not the last message time
+- [ ] Chat row subtitle: last message, prefixed "You: " when not from the customer
+- [ ] Subtitle text by kind: payment "Order created", proof "Payment proof submitted", steps "Payment steps shown", image "Screenshot", code "Code sent", deleted "Message deleted", else the text
+- [ ] Unread when `unread_by_admin` above 0: bold time and subtitle, navy count bubble
+- [ ] Inactive row gray badge "Inactive · {timeAgo without ago}"
+- [ ] Active orders: awaiting_payment with `expiresAt` in the future, newest created first, row time `createdAt`
+- [ ] Active order line: bold plan · amount · method
+- [ ] Active order badge blue "{n} min left to pay", n rounded up, not below 0
+- [ ] Active order progress bar `#0a84ff` on `#eef1f7`: `(expiresAt - now) / (expiresAt - createdAt)`, not below 0
+- [ ] Cancelled: orders cancelled or expired, newest first
+- [ ] Cancelled time: expired uses `expiresAt`; cancelled uses `reviewedAt ?? createdAt`
+- [ ] Cancelled line: bold plan · amount
+- [ ] Cancelled badge gray: "Cancelled by customer · {timeAgo}" or "Time ran out · {timeAgo}"
+- [ ] Order rows show no unread bubble
+- [ ] Row: avatar 44, number tag, title in bold, time; whole row opens the chat
+- [ ] Search and "show 30 more" work as in Inbox, reset on filter or search change
+- [ ] Empty with a search: "Nothing here", "No match for your search."
+- [ ] Empty Active chats: "Customers active right now show up here."
+- [ ] Empty Active orders: "Orders waiting for the customer to pay show up here."
+- [ ] Empty Cancelled: "Cancelled and expired orders show up here."
+- [ ] Empty Inactive: "Customers who have gone quiet show up here."
+
+## Customers [components/admin/customers/AppCustomers.tsx, components/admin/customers/BlockCustomerButton.tsx, lib/store/admin.ts]
+
+- [ ] Header back button returns to Dashboard, title "Customers", search placeholder "WhatsApp, email or ID", signal button
+- [ ] Subtitle "{n} customers · each one sees only their own chat"
+- [ ] Chips: All (count), Active now with `#22c55e` dot, Blocked with red dot
+- [ ] Sorted by `lastActivityAt`, newest first
+- [ ] Active now: not blocked and active
+- [ ] Blocked: `blocked` true
+- [ ] Search matches lower-cased email, WhatsApp, or the number label lower-cased
+- [ ] Time values refresh every 30 seconds
+- [ ] Row: avatar 44, number tag, WhatsApp link with icon, or grey "No WhatsApp"
+- [ ] Second line: email, one line
+- [ ] Third line: green "Active now", or `timeAgo(lastActivityAt)`
+- [ ] Chat button opens the Bot section with this customer's chat
+- [ ] Block button red-50; Unblock button solid red-500
+- [ ] Empty: "No customers found", with "No match for your search." when searching
+- [ ] Show 30 and load 30 more, reset on filter or search change
+- [ ] Block dialog title "Block customer", description "{email} will see this reason"
+- [ ] Block options: `settings.blocking.reasons` plus "Write a reason"; first selected
+- [ ] "Write a reason" input focused, max 150, placeholder "Type the reason"
+- [ ] Block button disabled until the trimmed reason is not empty
+- [ ] blockCustomer writes `customers`: blocked true, block_reason
+- [ ] blockCustomer inserts `messages`: sender admin, kind text, "{blocking.message}\nReason: {reason}", and writes last_message_at
+- [ ] `customers.blocked_at` is never sent; the server sets it
+- [ ] Unblock dialog text "{email} will be able to use the chat again.", confirm "Yes, unblock"
+- [ ] unblockCustomer writes `customers`: blocked false, block_reason null
+- [ ] unblockCustomer inserts `messages`: sender admin, text `blocking.unblockMessage`, and writes last_message_at
+
+## Search [components/admin/search/SearchResults.tsx, components/admin/AdminShell.tsx]
+
+- [ ] Title "Search results"
+- [ ] Subtitle "{n} result(s) for "{query}"", or "Type to search" with an empty query
+- [ ] Query trimmed, compared lower-cased
+- [ ] Customers: stored email contains the query, WhatsApp contains it, or the number label contains it
+- [ ] Orders: id, sender name or code contains the query, case-insensitive
+- [ ] Messages: kind text only, text contains the query, case-insensitive, loaded messages only
+- [ ] Group order: Messages, Customers, Orders; a group with 0 results is hidden
+- [ ] Group header shows icon, title and full count
+- [ ] Messages list shows the first 50; others show all
+- [ ] Message row: "{email} · {Customer|You|Auto-reply} · {date time}", then the snippet
+- [ ] Snippet: 40 characters before the match, 80 after, "…" where cut, match highlighted in amber
+- [ ] Customer row: number label and email, match highlighted
+- [ ] Order row: order id highlighted, "{email} · {plan} · {amount}"
+- [ ] Message and customer tap: Bot section, that chat
+- [ ] Order tap: Inbox section, that chat, tab pending when pending_review, otherwise completed
+- [ ] No results: "No matches", "Try a code, name, email, order number or any word from a chat."
+- [ ] Back returns to Dashboard
+
+## Settings [components/admin/settings/AppSettings.tsx]
+
+### Settings home and profile [components/admin/settings/AppSettings.tsx, components/admin/settings/AdminPhoto.tsx, components/admin/settings/settingsTabs.tsx, lib/supabase/adminProfile.ts, hooks/useAdminProfile.ts]
+
+- [ ] Search top right, placeholder "Search settings", signal button beside it
+- [ ] Search filters sections by label and description, lower-cased; Dark mode and Sign out hide while searching
+- [ ] Profile photo 128 px, gold person icon on a navy gradient when empty
+- [ ] Gold camera button opens the photo dialog, disabled until the profile loads
+- [ ] Profile loads once from `admins` (display_name, avatar_path); name falls back to "Admin"
+- [ ] Name in navy with the email under it; tap opens the name dialog
+- [ ] Name dialog title "Your name", description "Shown on your profile"; field empty when the name is "Admin", max 40
+- [ ] Save disabled when the trimmed name is empty or busy
+- [ ] Save writes `admins.display_name` straight to the server, not through the outbox
+- [ ] Name failure shows "The name could not be saved. Check your internet and try again."
+- [ ] Photo dialog title "Profile photo", description "JPG, PNG or WebP · up to 2 MB"
+- [ ] Photo options: Camera (front), Gallery (JPG, PNG, WebP), Remove (disabled with no photo)
+- [ ] Photo check: "Please choose a JPG, PNG or WebP photo."; "This photo is bigger than 2 MB. Please choose a smaller one."
+- [ ] Upload to public `avatars` bucket at `{userId}/{id}.{jpg|png|webp}`
+- [ ] Then write `admins.avatar_path`, then delete the old file
+- [ ] Remove writes `admins.avatar_path` null and deletes the old file
+- [ ] Busy text "Saving photo…"; failure "The photo could not be saved. Check your internet and try again." in amber
+- [ ] Section cards in order with description and chevron: Availability "Status, working hours, closed message"; Plans & payments "Plans, prices, payment methods"; Support "Welcome, support requests, FAQs"; Inbox & blocking "Tabs, quick replies, block reasons"; Timers & limits "Order time, cooldowns, cancels"; Appearance "Chatbot colour"
+- [ ] Dark mode row with a switch, gold when on, subtitle "Switch between light and dark"
+- [ ] Sign out row in red opens the sign-out confirm
+- [ ] Section screen: round back button, centred title, subtitle on inner pages (the section name, or the page's own subtitle)
+- [ ] Inner pages stack; Back closes one at a time
+
+### Draft and save [components/admin/settings/useSettingsDraft.ts, components/admin/settings/app/pages.tsx, components/admin/settings/app/ui.tsx, lib/validation.ts, lib/store/admin.ts]
+
+- [ ] Editing changes a local draft of settings, plans, methods and faqs; nothing goes live until Save
+- [ ] The draft survives moving between sections and pages
+- [ ] Leaving the Settings tab drops the draft with no warning (web behaviour)
+- [ ] Unsaved check ignores `settings.status`
+- [ ] Save bar shows on home and sections when there are changes: Discard (one third), Save changes (two thirds, navy)
+- [ ] After a good save, show "Saved and live" in green for 2.5 seconds
+- [ ] Discard resets the draft to live values
+- [ ] A live config change from elsewhere refreshes the draft only when the draft has no edits
+- [ ] Save cleans first: trim terms, reject reasons and block reasons and drop empty lines
+- [ ] Save cleans first: trim tab labels
+- [ ] Save cleans first: drop FAQs with an empty question or answer
+- [ ] Save cleans first: method steps go through `stepLines`
+- [ ] Errors show in a red box titled "Please fix these before saving:" on home and on sections
+- [ ] Save keeps the live `status`, not the draft's
+- [ ] Save writes `store_config` by upsert: id 1, settings, plans, methods, faqs, updated_at
+- [ ] Validation "Store name can only contain letters and spaces." (also over 40)
+- [ ] Validation "Welcome message cannot be empty."
+- [ ] Validation "\"How does it work\" answer cannot be empty."
+- [ ] Validation "Add at least one step to How to use and Instructions for next time."
+- [ ] Validation "Steps cannot be empty. Delete the ones you don't need."
+- [ ] Validation "Each step can be at most 800 characters."
+- [ ] Validation "Rejection message cannot be empty."
+- [ ] Validation "The waiting message cannot be empty."
+- [ ] Validation "Closed menu messages cannot be empty."
+- [ ] Validation "Add at least one rejection reason."
+- [ ] Validation "Support button labels cannot be empty."
+- [ ] Validation "Bot messages cannot be empty."
+- [ ] Validation "Inbox tab names cannot be empty."
+- [ ] Validation "The blocked customer message cannot be empty."
+- [ ] Validation "The unblock message cannot be empty."
+- [ ] Validation "Please enter a valid support email." when the email is set
+- [ ] Validation "Messages can be at most 800 characters."
+- [ ] Validation "Status messages cannot be empty."
+- [ ] Validation "Bank name can only contain letters and spaces." (2 to 40 letters)
+- [ ] Validation "Account title can only contain letters and spaces." (2 to 40 letters)
+- [ ] Validation "Account number must be 8 to 20 digits."
+- [ ] Validation "IBAN should look like PK36SCBL0000001123456702." (`^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$` without spaces)
+- [ ] Validation "Add the IBAN, or turn off Show IBAN for every payment method."
+- [ ] Validation for each plan: "Plan name "{name}" can only contain letters and numbers."
+- [ ] Validation for each plan: "Price for {name} must be between 1 and 999,999."
+- [ ] Validation "At least one plan must be visible."
+- [ ] Validation for each method: "Payment method "{name}" can only contain letters and spaces."
+- [ ] Validation for each method: "Steps for {name} are too long." (over 800)
+- [ ] Validation "At least one payment method must be shown."
+- [ ] Validation for FAQs: "FAQ question is too long: ..." (over 150) and "FAQ answer is too long for ..." (over 800)
+- [ ] Message list page: heading "Tap a message to edit it", two-line preview, "Empty" when blank, the default text as preview when one exists
+- [ ] Message editor page: title "Edit message", label, hint or "One per line." for list fields, 800 limit
+- [ ] Editor "Tap to add" chips insert a variable at the cursor and keep focus
+- [ ] Editor "Use the default text" shows when a default exists and the value differs
+- [ ] Editor shows the default text as placeholder
+- [ ] Bot message pages offer {timer}, {hours}, {back_in} plus their own variables
+
+### Availability [components/admin/settings/app/AvailabilitySection.tsx, lib/availability.ts, lib/store/admin.ts]
+
+- [ ] "Your status · changes instantly": four tiles, selected navy, showing the live status (not the draft)
+- [ ] Tiles: Active "Orders and support work normally" (emerald-500); Away "Orders taken, no new support" (amber-400); Away · closed "No new orders or support" (orange-500); Offline "No new orders or support" (zinc-400)
+- [ ] Tapping a tile calls setAdminStatus at once with no Save: `store_config` upsert with the new `settings.status`
+- [ ] Working hours: Opens and Closes time pickers, draft values
+- [ ] Switch "Go offline outside these hours" edits `hours.enforce`
+- [ ] Row "Order messages", "What buyers see for each status", count 4
+- [ ] Order message fields with status dots: "Active · after the screenshot", "Away · after the screenshot", "Away · closed · pop-up on Buy", "Offline · pop-up on Buy"; variables {hours}, {back_in}, {timer}
+- [ ] Row "Support messages", "After a request, and when closed", count 4
+- [ ] Support fields: "Active · after a request" and "Away · after a request" with {ticket_id}; "Away · closed · pop-up on Other issues" and "Offline · pop-up on Other issues"
+- [ ] Row "Closed menu", "While a payment or a request waits for you", count 7
+- [ ] Closed menu fields: Waiting for approval title and message; Payment rejected title and message; Request open title and message; "Away · closed or Offline · title"
+
+### Plans & payments [components/admin/settings/app/PaymentsSection.tsx, components/admin/settings/StepsEditor.tsx, components/admin/settings/GuideStepsEditor.tsx, lib/validation.ts, lib/supabase/guides.ts]
+
+- [ ] Plans list: name, "Visible to customers" or "Hidden", price pill, switch
+- [ ] Price pill gold border when active, grey when hidden; hidden name zinc-400
+- [ ] Switch toggles the plan in the draft without opening it
+- [ ] No add or delete for plans or methods in app mode
+- [ ] Plan page: Name keeps letters, digits and single spaces, no leading space, max 20
+- [ ] Plan page: Price digits only, max 6, empty counts as 0
+- [ ] Plan page: switch "Visible to customers"
+- [ ] Row "Bank account", sub "{bank} · •••• {last 4}"
+- [ ] Bank name and Account title: letters and single spaces, max 40
+- [ ] Account number: digits, max 20, grouped by 4; hint "8 to 20 digits"
+- [ ] IBAN: upper-case letters and digits, max 34, grouped by 4; hint "Shown only for the payment methods where you turn it on"; placeholder "PK36 SCBL 0000 0011 2345 6702"
+- [ ] Bank footer "A change applies to new orders only. Orders already created keep the account they were shown."
+- [ ] Row "Payment methods" lists names, count
+- [ ] Methods page: "Tap a method to edit it", row sub "Shown|Hidden · IBAN on · {n} steps"; "No name" when empty
+- [ ] Method page: Name letters only, max 20; switches "Shown to customers", "Show IBAN" ("Adds the IBAN to these steps")
+- [ ] Method steps: numbered list, hint for {bank}, {account}, {title}, {iban}, "Add step", delete, reorder
+- [ ] Step text max 150, new lines become spaces, leading "1." or "1)" removed
+- [ ] No steps text "No steps yet. Customers will not see a Steps button for this method."
+- [ ] Row "How does it work?", "Answer before ordering": editor with {timer}
+- [ ] Row "How to use", "Steps on the code, each can have an image", count
+- [ ] Row "Instructions for next time", "Steps on the code", count
+- [ ] Guide step: text max 150, optional image, X removes image, attach, delete, reorder, "Add step"
+- [ ] New guide step gets a generated id; empty placeholder "Describe this step"
+- [ ] Guide image: prepared like a chat image, uploaded to public `guides` bucket as `{id}.jpg`; stored value is the public URL
+- [ ] Guide upload failure turns the attach icon red; button disabled while uploading
+- [ ] Row "Rejecting a payment", count 3: Rejection message ({reason}, {order_id}), Reasons to choose from (one per line), Message while waiting for you
+- [ ] Row "Terms & conditions", count of non-empty lines; one per line, {timer}
+- [ ] Row "Buying messages", count 4: Choose a plan, Choose a payment method, Before the terms, Order created ({order_id}, {plan})
+- [ ] Row "Cancelled & paused", count 5: Order cancelled, Order cancelled by admin ({order_id}), Order cancelled and new orders paused ({time_left}), Customer tries to buy while paused ({time_left}), Payment time ran out ({order_id})
+
+### Support [components/admin/settings/app/SupportSection.tsx]
+
+- [ ] Row "Store name" shows the value; page field letters and single spaces, max 40
+- [ ] Row "Welcome messages", "First visit, coming back, main menu", count 3: Welcome message, When a customer comes back, Main menu
+- [ ] Row "Request buttons" shows both labels; fields max 30: "Button to keep the request open", "Button to close the request"
+- [ ] Request buttons footer "The customer sees these two buttons after you answer a support or payment problem request."
+- [ ] Switch "Screenshot required for Other issues"
+- [ ] Row "Support messages", "Open, other issues, resolved, closed", count 5: Customer opens Support, Customer chooses Other issues, Customer marks the request resolved, You mark the request resolved ({ticket_id}), Request closed: the customer stopped replying after your answer ({ticket_id})
+- [ ] FAQs heading "FAQs · {n}" with "+ Add"
+- [ ] Add creates an empty FAQ, opens it, shows "New question" in grey
+- [ ] FAQ row: number, question, chevron rotates when open; one open at a time
+- [ ] FAQ fields: Question max 150, Answer max 800, red "Delete" removes it at once in the draft
+
+### Inbox & blocking [components/admin/settings/app/InboxSection.tsx, components/admin/settings/QuickRepliesEditor.tsx]
+
+- [ ] Five inbox tabs with number, editable name max 24, up and down arrows
+- [ ] Up disabled on the first, down disabled on the last
+- [ ] Tab keys stay fixed; only labels and order change
+- [ ] Row "Quick replies": first two joined by " · ", or "None yet", count of all rows
+- [ ] Quick replies page text "Ready-made replies you can send from the chat with the quick replies button."
+- [ ] Quick reply: number, text max 300, new lines become spaces, up, down, delete, placeholder "Type a quick reply"
+- [ ] Empty list text "No quick replies yet."; "Add reply" adds an empty row
+- [ ] Row "Block & unblock messages", "What the customer sees", count 2
+- [ ] Field "Message for blocked customers", hint "The reason you choose is shown under it."
+- [ ] Field "Message when you unblock"
+- [ ] Row "Email button", sub "{label} · {email}" or "{label} · hidden"
+- [ ] Email page: "Button text" max 40; "Support email" max 80, no spaces, placeholder "support@example.com", hint "Leave empty to hide the button"
+- [ ] Row "Block reasons" with count of non-empty reasons and red chips under it
+- [ ] Block reasons page hint "The reasons you can pick when you block someone. One per line."
+
+### Timers & limits [components/admin/settings/app/TimersSection.tsx]
+
+- [ ] Timer rows: "Time to pay" (`orderMinutes`), "Chat goes quiet" (`inactiveMinutes`), "Cancel window" (`cancelWindowMinutes`), "Order pause" (`cancelCooldownMinutes`), "Request closes" (`issueInactiveMinutes`)
+- [ ] Help text: "Payment card timer", "A chat becomes inactive after", "Cancellations counted within", "New orders paused after cancels for", "A request closes with no reply after"
+- [ ] Each row: minus, number, plus, min or hr switch
+- [ ] Unit starts as hr when minutes are a whole number of hours of at least 60, otherwise min
+- [ ] Minus disabled at 1; no upper limit on plus
+- [ ] Switching the unit keeps the number and changes the stored minutes (30 min becomes 30 hr)
+- [ ] Values are stored in minutes
+- [ ] Footer "Changes apply to new orders and requests only."
+- [ ] "Cancels before new orders pause": 1, 2, 3, 5 (`limits.cancelsBeforeCooldown`)
+- [ ] "Block after this many cancels in a day": 2, 3, 5, 10 (`limits.cancelsBeforeBlock`)
+- [ ] "Replies after a rejected payment": 1, 2, 3 (`limits.repliesAfterRejection`)
+
+### Appearance [components/admin/settings/app/AppearanceSection.tsx]
+
+- [ ] Group "Chatbot colour" with six tiles in three columns
+- [ ] Colours: Navy `#0C2660`, Emerald `#0F7B5F`, Royal `#3B4FD8`, Bronze `#9A6B24`, Charcoal `#1F2329`
+- [ ] Custom tile: colour picker; rainbow circle until a custom colour is set, then that colour
+- [ ] Selected tile has a navy border; matching ignores letter case
+- [ ] Saves to `settings.accent` through the draft
+
+## Notifications [lib/features/notifications/push_service.dart, lib/features/notifications/order_actions.dart, lib/features/notifications/code_finder.dart, lib/features/notifications/background_access.dart, supabase/functions/send-push/index.ts, components/admin/layout/Toasts.tsx, lib/store/customer.ts]
+
+- [ ] Android only; failure to set up logs and leaves notifications off, the app keeps working
+- [ ] Startup: `Firebase.initializeApp`, local notifications init, create channel, then background handler, opened-app listener, initial message, launch details
+- [ ] Channel id `admin_alerts`, name "Payments and support", description "New payments, payment problems and support requests", high importance
+- [ ] Notification icon `@drawable/ic_notification`, gold colour, high priority
+- [ ] After sign-in, ask notification permission, save the token, listen for token refresh, then ask to ignore battery optimisation
+- [ ] Token save upserts `admin_devices`: token, user_id, platform android, updated_at
+- [ ] Sign out deletes the `admin_devices` row and calls `deleteToken`
+- [ ] Tokens rejected by FCM (UNREGISTERED, SENDER_ID_MISMATCH) are deleted by the server
+- [ ] No pop-up while the app is open; on-screen counts are enough
+- [ ] The server sends on every new `notifications` row, to every saved device
+- [ ] Kind payment finds the customer's latest pending_review order; kind support finds the latest open support ticket; three tries, 1.5 seconds apart
+- [ ] With a target, FCM sends data only: section inbox, tab, customerId, orderId or ticketId, title, body
+- [ ] Without a target, FCM sends a normal notification with section inbox, tab, customerId, on channel `admin_alerts`
+- [ ] Tab by kind: payment pending, payment_issue pending, support issues, blocked blocked
+- [ ] Titles and bodies in use: "Payment submitted" "{title} · {plan} · Rs {amount}"; "Reply to a rejected payment" "{title} · {text}"; "New support issue" "{title} · {text}"; "Customer blocked" "{title} · Too many cancelled orders"
+- [ ] Background data message shows an alert keyed by orderId or ticketId; a message with neither is ignored by the handler
+- [ ] Alert id is derived from orderId or ticketId, so a later update replaces it
+- [ ] Order alert buttons: Approve (text input "Paste the code message"), Reject (opens the app), Cancel order
+- [ ] Issue alert buttons: Resolved, Reply (text input "Type your reply")
+- [ ] Button actions run without opening the app, including from a killed app (background entry point initialises Supabase)
+- [ ] Approve finds the code with the same rule as the Approve dialog; empty text or no code does not call the server
+- [ ] Approve calls RPC `admin_approve_order(order_id, code_message, code)`
+- [ ] Cancel order calls RPC `admin_cancel_order(order_id)`
+- [ ] Resolved calls RPC `admin_resolve_ticket(ticket_id)`
+- [ ] Reply calls RPC `admin_reply(customer_id, reply)`
+- [ ] Result text replaces the alert: approved "Approved. The code was sent to the customer."
+- [ ] Result text: cancelled "Order cancelled. The customer was told."
+- [ ] Result text: resolved "Marked as resolved. The customer was told."
+- [ ] Result text: sent "Reply sent to the customer."
+- [ ] Result text: already_done "This was already handled."
+- [ ] Result text: missing "This no longer exists."
+- [ ] Any other result shows "Done."
+- [ ] Retry results show the alert again with its buttons: no_code "No code found in that message. Paste the full code message again."
+- [ ] Retry result: code_used "This code was already sent before. Paste a different code message."
+- [ ] Retry result: empty "The reply was empty. Type your reply again."
+- [ ] Failed call shows the alert with title "Could not do that", body "Check the internet and try again, or open the app."
+- [ ] Reject opens Inbox, Pending tab, with the Reject dialog for that order
+- [ ] Tap on the alert opens Inbox on the alert's tab with that customer's chat
+- [ ] A tap before the app is ready waits and opens once the app listens
+- [ ] `notifications` rows keep syncing and read state is written as in Chat and Inbox, though the app has no bell
+
+## Data and sync [lib/supabase/sync.ts, lib/supabase/tables.ts, lib/supabase/mappers.ts, lib/supabase/screenshots.ts, lib/store/state.ts, lib/store/connection.ts, lib/clock.ts, components/SyncNotice.tsx, components/admin/layout/PaymentIssueTimer.tsx, lib/store/admin.ts]
+
+- [ ] Tables held in memory: customers, conversations, orders, messages, tickets, notifications, plus `store_config` (id 1)
+- [ ] Keys: `conversations.customer_id`, `id` for all others
+- [ ] Sort: customers by `created_at` ascending; orders, tickets, notifications newest first; messages oldest first
+- [ ] Times are bigint milliseconds; `updated_at` and `store_config.updated_at` are timestamps
+- [ ] `conversation.typing` is local only, kept across row updates, never written
+- [ ] Reading config merges defaults under saved values for statusMessages, supportMessages, supportClosedMessages, menuLock, timers, limits, support, messages and blocking
+- [ ] Inbox tabs from config: keep saved known tabs in saved order, then add missing defaults
+- [ ] Old guide fields `activationGuide` and `nextTimeGuide` convert to steps when `usageSteps` or `nextTimeSteps` are missing
+- [ ] An order's `bank` exists only when `account_number` is set
+- [ ] Writing a customer leaves out `customer_number` when unknown and `whatsapp` when empty
+- [ ] Realtime: `postgres_changes` on all events for customers, conversations, orders, messages, tickets, notifications and store_config
+- [ ] A fresh channel name every time, so a closing channel is never reused
+- [ ] DELETE removes the row locally; `store_config` DELETE is ignored
+- [ ] INSERT and UPDATE upsert by key, then re-sort messages and notifications
+- [ ] When realtime re-subscribes after the first time, run a catch-up
+- [ ] Startup order: sync clock, load outbox, load cache, send outbox, load data, subscribe realtime, start timers
+- [ ] First load: all tables plus `store_config`, messages from the last 2 days
+- [ ] Read 1000 rows per page; first page has the exact count, remaining pages load together, rows seen twice are kept once
+- [ ] First load is accepted only when every table loaded and customers did not vanish (0 rows while the device already has customers)
+- [ ] First load tries 3 times if local changes raced it, then retries every 5 seconds until it works
+- [ ] A table that failed in a later load keeps what is on screen
+- [ ] No `store_config` row on load: insert the defaults
+- [ ] Older messages load in the background after the first load: `created_at` up to 2 days ago plus 1 hour
+- [ ] Older messages are merged without duplicates, sorted, and retried at the next catch-up if they fail
+- [ ] Opening a chat before older messages arrive loads that chat in full, by `customer_id`, ordered by `created_at`
+- [ ] Refresh every 20 seconds while the app is on screen
+- [ ] Catch-up also runs on return after over 10 seconds hidden, on connection back, and after a reconnect
+- [ ] Catch-up asks only for rows with `updated_at` at or after the last check minus 60 seconds
+- [ ] Catch-up reads `store_config` the same way, zero rows is fine
+- [ ] A full load replaces the change check once every 24 hours
+- [ ] `updated_at` missing (error 42703) falls back to full loads
+- [ ] Waiting local writes go first: with first op tries under 3, send the outbox and refresh after
+- [ ] No session at catch-up: skip it, keep the screen
+- [ ] Full refresh with limited messages replaces only messages newer than the cut-off and leaves untouched messages as they are
+- [ ] A load that overlapped a local change is thrown away and repeated, up to 3 attempts
+- [ ] Chat kept 15 days on device and server, except customers with a `code_unused` order
+- [ ] Own writes win for 10 seconds after the server confirms them: a remote row keeps local values for those columns
+- [ ] Own-write memory covers changed columns only; `created_at` is never protected; empty columns of a new row are not protected
+- [ ] The window restarts when the server confirms an update; a refused op forgets it
+- [ ] Protected customers still accept the server's `customer_number`
+- [ ] Update ops send only the columns that changed
+- [ ] Outbox: every write is saved on the device before sending (web key `premium-store-outbox:admin:{userId}`)
+- [ ] Outbox sends one op at a time, in order, oldest first
+- [ ] Ops of one action go in table order customers, conversations, orders, messages, tickets, notifications; inserts, then updates; config last
+- [ ] Op types: insert, update by key, delete, `store_config` upsert
+- [ ] Retry when there is no error code, or status 0, 401, 408, 429, 5xx, or code PGRST301, PGRST303
+- [ ] Retry delay `min(30 s, 1 s × 2^min(tries, 5))`; tries are saved with the op
+- [ ] Status 0 marks the app offline
+- [ ] An insert retried after a failure first selects which ids already arrived and sends only the missing rows
+- [ ] Any other error is a refusal: drop the op, forget its own-write memory, show the notice, then full reload
+- [ ] Refusal notice: title "That could not be saved", the server message, X to close, 8 seconds
+- [ ] Unsent ops stay on the device per account and go out at the next sign-in
+- [ ] Connection coming back sends the outbox and runs a catch-up
+- [ ] Cache: device copy per user (web key `premium-store-cache:admin:{userId}`), version 3; other versions are ignored
+- [ ] Cache holds all tables, config, last check time and last full load time
+- [ ] Cached messages cover only the last 2 days
+- [ ] Cache writes 1.5 seconds after the last change, and at once when the app goes to the background
+- [ ] A failed cache write removes the cache, so half a copy is never shown
+- [ ] App opens from cache at once and the data loads behind it; a cache under 24 hours old asks only for changes
+- [ ] Loading cache applies the 15-day rule
+- [ ] Sign out removes the cache
+- [ ] Clock: read `GET https://premiumstore.online/api/time`, offset = server now minus the midpoint of the request
+- [ ] Clock rechecks at most every 10 minutes, saves the offset, keeps the last one offline
+- [ ] All timers and labels use server time, not the phone clock
+- [ ] Payment issue timer: next end is `ticket.createdAt + retryMinutes` for open payment tickets
+- [ ] At that moment set those tickets resolved with no bot message; the server does the same every minute
+- [ ] `customers.blocked_at`, message, ticket and notification `created_at`, and `updated_at` are set by the server
+
+## Rules that must match the web [components/admin/inbox/inboxItems.ts, components/admin/customerStatus.ts, components/admin/ui/CustomerAvatar.tsx, components/admin/ui/Avatar.tsx, lib/store/helpers.ts, lib/validation.ts, lib/format.ts, lib/availability.ts, lib/store/messageIndex.ts, supabase/schema.sql]
+
+- [ ] `lastActivityAt` = larger of `customer.lastSeenAt` and the newest message with sender customer, 0 when neither exists
+- [ ] `isCustomerActive` = `now - lastActivityAt < inactiveMinutes × 60000`
+- [ ] `customerTitle` = WhatsApp if set, otherwise email; "Customer" if the row is missing
+- [ ] Customer number label `#{number}`, or "New" with no number
+- [ ] `canStillPay` = status awaiting_payment and `expiresAt > now`
+- [ ] Pending order = status pending_review or rejected
+- [ ] Cancelled order = status cancelled or expired
+- [ ] Open ticket = status open and the kind matches
+- [ ] Code extraction, one word: strip non-alphanumerics, valid only at exactly 6 characters
+- [ ] Code extraction, several words: a line that is exactly 6 letters or digits wins
+- [ ] Code extraction otherwise: 6-character words containing a digit or all upper-case; first one after the first colon, otherwise first in the text
+- [ ] `codeOnOwnLine`: needs at least 2 lines; first line of exactly 6 letters or digits
+- [ ] `extractCodes`: 6-character words, any case, containing a digit
+- [ ] Chat messages are never refused for a repeated code; only the Approve dialog refuses
+- [ ] Duplicate check ignores case, and drops `PS-…` and `T-…` numbers from the text first
+- [ ] Duplicate check looks at all order codes, then admin messages that are not deleted
+- [ ] Duplicate result takes the customer email and time from the earlier order (`reviewedAt ?? createdAt`) or message
+- [ ] Message delete allowed only for sender admin with kind text or image
+- [ ] Find the customer's messages by index; the panel works with thousands of messages
+- [ ] Avatar ring quarters clockwise from the top: order status, always grey, app issue, completion
+- [ ] Ring order colour: any pending or rejected `#ff5d7d`; else any payable order `#0a84ff`; else latest order cancelled or expired `#c38763`
+- [ ] Ring app issue colour `#ffb02e` with an open support ticket
+- [ ] Ring completion colour: any `codeUnused` `#7f66ff`; else any completed `#00a884`
+- [ ] Ring empty quarters zinc-200, 3 degree gap, width 17% of the size
+- [ ] Avatar dot bottom right: active `#22c55e`, inactive `#9ca3af`, 22% of the size
+- [ ] Blocked mark: red `#ef4444` circle with a white X at bottom left, 36% of the size
+- [ ] Avatar initials from the customer email; hue from the sum of character codes mod 7 over 210, 160, 30, 280, 340, 190, 100
+- [ ] Badge tones: green emerald-50/700, amber amber-50/700, red red-50/700, blue sky-50/700, gray zinc-100/600, violet violet-50/700
+- [ ] All times and day changes use Pakistan time (Asia/Karachi, UTC+5, no daylight saving), whatever the phone zone
+- [ ] Time format "7:50 PM"; date "23 Oct 2026"; date time "23 Oct 2026, 7:50 PM"
+- [ ] List time: today the time, then "Yesterday", then "23 Oct" this year, otherwise the full date
+- [ ] `timeAgo`: under 45 seconds "just now", then "5m ago", "3h ago", "2d ago", from 7 days the date
+- [ ] Money "Rs " + number with `en-PK` grouping
+- [ ] Effective status: offline wins; with `hours.enforce` outside hours is offline; otherwise the chosen status
+- [ ] Working hours can cross midnight: start after end means open from start or before end; end time is excluded
+- [ ] `{back_in}` = minutes until opening, shown "45 min", "2h", "2h 30m"
+- [ ] `{hours}` = "9 AM to 10 PM", minutes shown when not 0
+- [ ] Placeholders: {timer}, {hours}, {back_in}, {bank}, {account} (no spaces), {iban}, {title}
+- [ ] `stepLines` splits on new lines, removes "1." or "1)", trims and drops empty lines
+- [ ] Ids: 8 random base-36 characters plus the last 4 of the time in base 36
+- [ ] WhatsApp link `https://wa.me/92{number without the first digit}`
+- [ ] Server: admins pass the customer guards (`is_trusted`), so admin writes skip order, message, ticket and conversation rules
+- [ ] Server: `orders.status` may become expired only from awaiting_payment, even for an admin
+- [ ] Server: `expire_unpaid_orders` runs every minute with 2 minutes' grace, sends `orderExpired` and moves the chat to the menu
+- [ ] Server: `close_idle_requests` runs every minute; payment tickets close after `retryMinutes`
+- [ ] Server: support tickets close only while status is active, after an admin reply plus `issueInactiveMinutes`, unless the customer answered and the stage is live or waiting_agent
+- [ ] Server: resolving a payment ticket clears `payment_blocked_until`
+- [ ] Server: a bot text message with the same text within 60 seconds is dropped silently
+- [ ] Server: cancelling at `cancelsBeforeBlock` in 24 hours blocks the customer, writes three messages and a "Customer blocked" notification
+- [ ] Server: `blocked_at` is set on block and cleared on unblock
+- [ ] Server: chat messages older than 15 days are deleted, apart from customers with an unused code
+- [ ] Server: screenshots older than 7 days are removed and paths cleared, apart from pending and rejected orders
+- [ ] Storage: `screenshots` is private, `guides` and `avatars` are public; screenshots and guides allow 5 MB of JPEG, PNG, WebP; avatars 2 MB

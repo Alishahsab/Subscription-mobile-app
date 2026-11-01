@@ -5,8 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
-import '../../core/theme/app_colors.dart';
-import 'code_finder.dart';
+import '../../app/theme/app_colors.dart';
+import '../../core/utils/code_rules.dart';
 
 const alertsChannel = AndroidNotificationChannel(
   'admin_alerts',

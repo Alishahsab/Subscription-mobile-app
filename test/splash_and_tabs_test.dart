@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:premium_store_admin/features/home/floating_tab_bar.dart';
-import 'package:premium_store_admin/features/splash/splash_screen.dart';
+import 'package:premium_store_admin/features/shell/widgets/floating_tab_bar.dart';
+import 'package:premium_store_admin/features/splash/screens/splash_screen.dart';
 
 void main() {
   testWidgets('the splash shows the store name and finishes quickly', (tester) async {
@@ -26,7 +26,7 @@ void main() {
       ),
     );
 
-    for (final label in ['Dashboard', 'Inbox', 'Bot', 'Settings']) {
+    for (final label in ['Home', 'Inbox', 'Bot', 'Settings']) {
       expect(find.text(label), findsOneWidget);
     }
 

@@ -2,6 +2,122 @@
 
 What was done each day, newest first.
 
+## 1 Nov 2026 – Client test changes
+
+- New line-style footer icons for Home, Inbox, Bot and Settings.
+- Approve, Reject and Cancel are small buttons in one row, in the inbox and in the chat.
+- Cancel has a lighter grey colour, and the dark amber used across the app is lighter.
+- Unblock uses the soft red everywhere.
+- The unblock and block popups show the customer number instead of the email.
+- The approve popup shows the sender account name with the number.
+- The picture viewer close button moved to the right.
+- The Premium Store pill is only as wide as its text.
+- The gold count on the selected category is gone, which was the likely yellow flash.
+- A blocked customer never counts as active.
+- The saved copy is read and written in the background, and a loading screen shows until the data is ready instead of zeros.
+- The customer details screen now matches the web panel: a large round close button on the right, WhatsApp mark, big Approve with Reject and Cancel under it.
+
+## 31 Oct 2026 – Screenshot could not be opened
+
+- The picture is copied into memory the moment it is picked, with up to three tries, before anything else happens to it.
+- The picker is cleared only after the picture is ready, because some phones stop giving access once it is emptied.
+- A failed try now saves the real browser error, the file type and the size.
+
+## 31 Oct 2026 – Native app, look and movement
+
+- Search opens with the same growing animation as before, with a gold ring, on every screen. On Home the results show under the search bar.
+- Tabs and categories now slide smoothly when tapped or swiped.
+- New footer: Home, Inbox, Bot and Settings with the new icons, more see-through, a little narrower and higher.
+- Pending has a new colour, #794983, in the app and on the website.
+
+## 31 Oct 2026 – Screenshot upload, second step
+
+- The customer sees one button. After two failed tries, that button becomes Choose from Files, with a message.
+- Both ways make the picture smaller first. The 2 MB limit applies only to a picture the browser cannot make smaller, and the screenshots storage refuses anything over 2 MB.
+- A failed try saves the browser and the reason, so problem versions can be seen.
+- The nightly cleanup now also clears old screenshot paths from orders and messages, so old orders no longer point at deleted files.
+
+## 31 Oct 2026 – Native app, phase 7
+
+- A tap on a notification opens the right Inbox tab and that customer's chat in the native app.
+- Reject on a notification opens the reject box for that order, and waits for the data when the app was closed.
+- A tap that comes before the app is ready waits and opens afterwards.
+- Approve, Cancel order, Resolved and Reply from the notification keep working, even with the app closed.
+
+## 31 Oct 2026 – Native app, phase 6
+
+- Native Settings home: profile photo and name, search, six sections, dark mode and sign out.
+- Edits stay in a draft until Save changes, with Discard, the same checks as the website and the "Saved and live" notice. The status tiles still change instantly.
+- Availability: status, working hours, and order, support and closed menu messages.
+- Plans & payments: plans, bank account, payment methods with steps, customer guides with images, rejection, terms, buying and cancelled messages.
+- Support: store name, welcome messages, request buttons, support messages and FAQs.
+- Inbox & blocking: tab names and order, quick replies, block messages, email button and block reasons.
+- Timers & limits, and the chatbot colour with a custom colour picker.
+- Message editor with tap to add variables and Use the default text.
+- Steps and quick replies are reordered with up and down buttons.
+- Missing saved settings fall back to the same defaults as the website.
+
+## 31 Oct 2026 – Native app, phase 5
+
+- Native Bot chat: Active chats, Active orders, Cancelled and Inactive, with counts, search, swipe and a time left bar on active orders.
+- Native customer list: All, Active now and Blocked, with search, WhatsApp links, last active, Chat and Block or Unblock.
+- Native search across messages, customers and orders, with the match highlighted. A tap opens that customer's chat.
+
+## 31 Oct 2026 – Native app, phase 4
+
+- Native chat: header with active status, day dividers, a floating day while scrolling, grouped messages with tap to see the full date, and delivered and seen ticks.
+- Every message type shows like the panel: customer, bot and admin bubbles, code, payment proof, images, deleted messages and order notes.
+- Older chat history loads when a chat is opened, and the chat is marked read on open and on every new message.
+- Reply box: text, send key, quick replies and images, with the same chat stage rules as the website.
+- Delete a sent message or image, with the file removed from storage.
+- Customer details: orders with Approve, Reject, Cancel and used or unused, issues with Reply and Resolved, a WhatsApp link, and Block or Unblock with a reason.
+
+## 31 Oct 2026 – Native app, phase 3
+
+- Native Dashboard: pending payments card, four counts, seven-day chart with tap to pick a day, customer list card, and swipe to Inbox.
+- Native Inbox: categories from Settings with counts and dots, search, swipe between categories, and 30 cards at a time.
+- Cards for Pending, App issues, Completed, Unused codes and Blocked, with the customer ring, screenshot and the right buttons.
+- Approve, Reject, Cancel, Mark as unused or used, Resolved, Reply with images, and Unblock. Approve goes through the server function, which refuses a code that was already sent.
+- Signal button with five bars, and a notice when the server refuses a change.
+- The tab bar shows how many payments and issues are waiting.
+
+## 31 Oct 2026 – Native app, phase 2
+
+- Native data layer on the same Supabase tables: customers, conversations, orders, messages, tickets, notifications and store settings.
+- The app opens at once from a copy on the phone, then loads what changed. Two days of chat load first and older messages follow in the background.
+- Live updates, a refresh every 20 seconds while the app is on screen, and a catch-up after the app comes back.
+- Changes wait on the phone until the server has them, and are sent again after a lost connection. A change the server refuses is dropped and the data reloads.
+- Times use the server clock. The Dashboard shows row counts for now, to check the data against the website.
+
+## 31 Oct 2026 – Native app, phase 1
+
+- Started the native Flutter admin app that will replace the WebView. It uses the same Supabase project, tables and rules as the website.
+- Added `docs/feature-checklist.md`: every behaviour of the web admin, to be ticked off as each screen is built.
+- New folder structure: `app` (app, router, theme), `core`, `data` and one folder per feature.
+- Riverpod for state, go_router for navigation.
+- Light and dark themes with the web admin's colours and font; dark mode is remembered.
+- Login, splash and the floating tab bar are the same as before. The tabs open native screens, which are placeholders for now.
+- Settings has dark mode and sign out until the real screens are built.
+
+## 31 Oct 2026 – Blocking and repeated messages
+
+- A customer is now blocked on the cancel that reaches the limit (the 3rd by default), so they can't create another order first. The setting now reads "Block after this many cancels in a day".
+- When a cancel blocks the customer, their cancel message and the "order cancelled" reply are saved, the chat goes back to the menu, and the admin gets a "Customer blocked" notification with the reason.
+- The server no longer saves the same bot message to the same customer twice within 60 seconds, for example the welcome message when a chat opens in two tabs.
+
+## 30 Oct 2026 – Unpaid orders expire on the server
+
+- Unpaid orders now expire on the server, every minute, from the order's real status. Phones and the panel no longer decide this, so an old copy on a device can't cancel a paid order or send a wrong "time ran out" message.
+- The server refuses to expire any order that isn't unpaid, even from an admin.
+- A customer who is sending proof when the timer ends still has the same 2 minutes for it to arrive, so the message can come up to about 3 minutes after the timer.
+
+## 30 Oct 2026 – Screenshot upload on Android
+
+- On Android the customer's screenshot button now opens the normal file chooser instead of the system Photo Picker, which could return without giving the page the picture.
+- If the customer comes back from the picker and no picture arrives, a clear message appears instead of nothing.
+- New Choose from Files link for pictures up to 1 MB, as a second way to add the screenshot.
+- If both ways fail, the message asks the customer to update Chrome.
+
 ## 30 Oct 2026 – Keyboard and faster panel
 
 - Typing no longer stutters: the panel resizes once, after the keyboard has opened, instead of on every frame of the keyboard animation, and the panel uses the WebView mode that handles typing better on Android.

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:premium_store_admin/features/notifications/code_finder.dart';
+import 'package:premium_store_admin/core/utils/code_rules.dart';
 
 void main() {
   test('finds the code on its own line of the portal message', () {
