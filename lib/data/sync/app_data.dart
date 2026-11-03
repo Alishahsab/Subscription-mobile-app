@@ -8,7 +8,6 @@ import '../models/store_config.dart';
 import '../models/ticket.dart';
 import 'db_table.dart';
 
-const chatKeptDays = 15;
 
 class AppData {
   const AppData({
@@ -133,11 +132,7 @@ class AppData {
     return copyWith(messages: [...older, ...messages]..sort((a, b) => a.createdAt.compareTo(b.createdAt)));
   }
 
-  AppData withoutOldMessages(int now) {
-    final cutoff = now - chatKeptDays * Duration.millisecondsPerDay;
-    final keepChat = orders.where((item) => item.codeUnused).map((item) => item.customerId).toSet();
-    return copyWith(messages: messages.where((item) => item.createdAt >= cutoff || keepChat.contains(item.customerId)).toList());
-  }
+  AppData withMessagesFrom(int from) => copyWith(messages: messages.where((item) => item.createdAt > from).toList());
 
   List<T> _upsert<T>(List<T> list, T item, String Function(T) idOf) {
     final id = idOf(item);

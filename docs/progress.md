@@ -2,6 +2,12 @@
 
 What was done each day, newest first.
 
+## 2 Nov 2026 – Less data download
+
+- Chats open with today and yesterday only; a Show older messages button loads the rest when asked.
+- The background check runs every minute instead of every 20 seconds, and re-reads 15 seconds instead of a minute.
+- The picture viewer gets a fresh link, shows a spinner while loading and a message if the picture cannot open.
+
 ## 1 Nov 2026 – Client test changes
 
 - New line-style footer icons for Home, Inbox, Bot and Settings.

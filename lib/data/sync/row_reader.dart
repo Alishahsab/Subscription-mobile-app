@@ -31,8 +31,13 @@ class RowReader {
     return unique.values.toList();
   }
 
-  Future<List<DbRow>> readChat(String customerId) {
-    return _client.from(DbTable.messages.name).select().eq('customer_id', customerId).order('created_at');
+  Future<List<DbRow>> readChat(String customerId, {required int before}) {
+    return _client.from(DbTable.messages.name).select().eq('customer_id', customerId).lt('created_at', before).order('created_at');
+  }
+
+  Future<bool> hasChatBefore(String customerId, int before) async {
+    final rows = await _client.from(DbTable.messages.name).select('id').eq('customer_id', customerId).lt('created_at', before).limit(1);
+    return rows.isNotEmpty;
   }
 
   Future<DbRow?> readConfig({String? changedSince}) async {

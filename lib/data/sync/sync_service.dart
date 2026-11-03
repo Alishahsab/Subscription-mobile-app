@@ -9,6 +9,7 @@ import '../../app/theme/theme_controller.dart';
 import '../models/db_row.dart';
 import '../models/store_config.dart';
 import 'app_data.dart';
+import 'chat_window.dart';
 import 'data_notifier.dart';
 import 'db_table.dart';
 import 'local_copy.dart';
@@ -18,13 +19,12 @@ import 'recent_writes.dart';
 import 'row_reader.dart';
 import 'server_clock.dart';
 
-const _refreshEvery = Duration(seconds: 20);
+const _refreshEvery = Duration(minutes: 1);
 const _loadRetry = Duration(seconds: 5);
 const _saveDelay = Duration(milliseconds: 1500);
 const _catchUpAfterHidden = Duration(seconds: 10);
-const _recentMessages = Duration(days: 2);
 const _fullLoadEvery = Duration(hours: 24);
-const _changesOverlap = Duration(minutes: 1);
+const _changesOverlap = Duration(seconds: 15);
 const _missingColumn = '42703';
 
 enum _ChangesResult { done, failed, unsupported }
@@ -55,9 +55,8 @@ class SyncService with WidgetsBindingObserver {
   int _lastFullLoadAt = 0;
   int _localVersion = 0;
   bool _changesSupported = true;
-  bool _olderLoading = false;
-  bool _olderDone = false;
   final _loadedChats = <String>{};
+  final _olderChats = <String, bool>{};
 
   Outbox get outbox => _outbox;
 
@@ -71,7 +70,7 @@ class SyncService with WidgetsBindingObserver {
 
   void _change(AppData Function(AppData data) update) => _ref.read(dataProvider.notifier).change(update);
 
-  int get _recentFrom => _clock.now - _recentMessages.inMilliseconds;
+  int get _recentFrom => chatShownFrom(_clock.now);
 
   Future<void> start() async {
     final userId = _client.auth.currentUser?.id;
@@ -83,18 +82,14 @@ class SyncService with WidgetsBindingObserver {
     _outbox.load(userId);
     final copy = await _copy.load(userId);
     if (copy != null) {
-      _change((_) => copy.data.withoutOldMessages(_clock.now));
+      _change((_) => copy.data.withMessagesFrom(_recentFrom));
       _changesSince = copy.changesSince;
       _lastFullLoadAt = copy.lastFullLoadAt;
     }
     await _outbox.send();
 
     final fresh = copy != null && _changesSince != null && _fullLoadIsRecent;
-    if (fresh && await _loadChanges() != _ChangesResult.unsupported) {
-      unawaited(_loadOlderMessages());
-    } else {
-      await _loadEverything();
-    }
+    if (!fresh || await _loadChanges() == _ChangesResult.unsupported) await _loadEverything();
 
     if (_userId == null) return;
     _listen();
@@ -109,9 +104,8 @@ class SyncService with WidgetsBindingObserver {
     _loadTimer?.cancel();
     _saveTimer?.cancel();
     _outbox.stop();
-    _olderLoading = false;
-    _olderDone = false;
     _loadedChats.clear();
+    _olderChats.clear();
     _changesSince = null;
     _lastFullLoadAt = 0;
 
@@ -149,14 +143,37 @@ class SyncService with WidgetsBindingObserver {
     _saveSoon();
   }
 
-  bool chatHistoryReady(String customerId) => _olderDone || _loadedChats.contains(customerId);
+  Future<bool> hasOlderChat(String customerId) async {
+    if (_loadedChats.contains(customerId)) return false;
+    final known = _olderChats[customerId];
+    if (known != null) return known;
+    try {
+      final found = await _reader.hasChatBefore(customerId, _recentFrom);
+      _olderChats[customerId] = found;
+      return found;
+    } catch (_) {
+      return false;
+    }
+  }
 
-  Future<void> loadChatHistory(String customerId) async {
-    if (chatHistoryReady(customerId)) return;
-    final rows = await _reader.readChat(customerId);
-    if (_userId == null) return;
-    _loadedChats.add(customerId);
-    _change((data) => data.withOlderMessages(rows));
+  Future<bool> loadOlderChat(String customerId) async {
+    try {
+      final rows = await _reader.readChat(customerId, before: _recentFrom);
+      if (_userId == null) return false;
+      _loadedChats.add(customerId);
+      _olderChats[customerId] = false;
+      _change((data) => data.withOlderMessages(rows));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _hiddenOlderMessage(DbTable table, DbRow row, AppData data) {
+    if (table != DbTable.messages) return false;
+    final createdAt = row['created_at'];
+    if (createdAt is! int || createdAt > _recentFrom || _loadedChats.contains(row['customer_id'])) return false;
+    return data.rowOf(table, row[table.key].toString()) == null;
   }
 
   Future<void> catchUp({bool fullLoad = false}) async {
@@ -172,7 +189,6 @@ class SyncService with WidgetsBindingObserver {
 
     if (!fullLoad && _changesSupported && _fullLoadIsRecent) {
       final result = await _loadChanges();
-      if (result == _ChangesResult.done) unawaited(_loadOlderMessages());
       if (result != _ChangesResult.unsupported) return;
     }
     await _loadEverything(retry: false);
@@ -227,7 +243,6 @@ class SyncService with WidgetsBindingObserver {
           _changesSince = _changesSupported ? startedAt : null;
           _lastFullLoadAt = DateTime.now().millisecondsSinceEpoch;
           _saveSoon();
-          unawaited(_loadOlderMessages());
           return;
         }
       } catch (_) {
@@ -278,12 +293,13 @@ class SyncService with WidgetsBindingObserver {
           for (var index = 0; index < DbTable.all.length; index++) {
             final table = DbTable.all[index];
             for (final row in results[index]) {
+              if (_hiddenOlderMessage(table, row, next)) continue;
               final local = next;
               next = next.withRow(table, _writes.merge(table, row, () => local.rowOf(table, row[table.key].toString())));
             }
           }
           if (config != null) next = next.copyWith(config: StoreConfig.fromRow(config));
-          return next.withoutOldMessages(_clock.now);
+          return next;
         });
         _changesSince = startedAt;
         _saveSoon();
@@ -297,23 +313,6 @@ class SyncService with WidgetsBindingObserver {
       }
     }
     return _ChangesResult.failed;
-  }
-
-  Future<void> _loadOlderMessages() async {
-    if (_olderLoading || _olderDone) return;
-    _olderLoading = true;
-
-    try {
-      final upTo = _recentFrom + const Duration(hours: 1).inMilliseconds;
-      final rows = await _reader.readAll(DbTable.messages, upTo: upTo);
-      if (_userId == null) return;
-      _change((data) => data.withOlderMessages(rows));
-      _olderDone = true;
-    } catch (_) {
-      return;
-    } finally {
-      _olderLoading = false;
-    }
   }
 
   void _listen() {
@@ -354,6 +353,7 @@ class SyncService with WidgetsBindingObserver {
       _change((data) => data.withoutRow(table, id));
     } else {
       final row = payload.newRecord;
+      if (_hiddenOlderMessage(table, row, _data)) return;
       _change((data) => data.withRow(table, _writes.merge(table, row, () => data.rowOf(table, row[table.key].toString()))));
     }
     _saveSoon();

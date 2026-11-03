@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../../core/utils/format.dart';
+import '../../../data/models/conversation.dart';
 import '../../../data/models/customer.dart';
 import '../../../data/models/message.dart';
 import '../../../data/models/order.dart';
@@ -168,9 +169,15 @@ String describeMessage(Message message) {
   }
 }
 
+const _chatKept = Duration(days: 15);
+
+bool _hasChat(AppData data, Conversation conversation, int now) {
+  return data.messagesOf(conversation.customerId).isNotEmpty || now - conversation.lastMessageAt < _chatKept.inMilliseconds;
+}
+
 List<InboxItem> chatItems(AppData data, {required bool active, required int now}) {
   final conversations = data.conversations.values
-      .where((item) => data.messagesOf(item.customerId).isNotEmpty)
+      .where((item) => _hasChat(data, item, now))
       .where((item) => isCustomerActive(data, item.customerId, now) == active)
       .toList()
     ..sort((a, b) => lastActivityAt(data, b.customerId).compareTo(lastActivityAt(data, a.customerId)));
@@ -178,15 +185,15 @@ List<InboxItem> chatItems(AppData data, {required bool active, required int now}
   return conversations.map((conversation) {
     final customerId = conversation.customerId;
     final activeAt = lastActivityAt(data, customerId);
-    final lastMessage = data.messagesOf(customerId).last;
-    final prefix = lastMessage.sender == 'customer' ? '' : 'You: ';
+    final lastMessage = data.messagesOf(customerId).lastOrNull;
+    final prefix = lastMessage == null || lastMessage.sender == 'customer' ? '' : 'You: ';
 
     return InboxItem(
       key: customerId,
       customerId: customerId,
       title: _titleOf(data, customerId),
       tag: customerTag(data.customer(customerId)),
-      subtitle: prefix + describeMessage(lastMessage),
+      subtitle: lastMessage == null ? '' : prefix + describeMessage(lastMessage),
       time: activeAt,
       unread: conversation.unreadByAdmin > 0,
       badge: active ? null : 'Inactive · ${_waitLabel(activeAt, now)}',

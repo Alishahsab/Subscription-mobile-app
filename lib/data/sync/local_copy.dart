@@ -7,10 +7,10 @@ import 'package:path_provider/path_provider.dart';
 import '../models/db_row.dart';
 import '../models/store_config.dart';
 import 'app_data.dart';
+import 'chat_window.dart';
 import 'db_table.dart';
 
 const _version = 1;
-const _recentMessages = Duration(days: 2);
 
 class SavedCopy {
   const SavedCopy(this.data, this.changesSince, this.lastFullLoadAt);
@@ -21,7 +21,7 @@ class SavedCopy {
 }
 
 DbRow copyToJson(AppData data, int? changesSince, int lastFullLoadAt, int now) {
-  final recentFrom = now - _recentMessages.inMilliseconds;
+  final recentFrom = chatShownFrom(now);
   final recent = data.copyWith(messages: data.messages.where((item) => item.createdAt > recentFrom).toList());
 
   return {

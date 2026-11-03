@@ -30,8 +30,10 @@ class _StoredImageState extends ConsumerState<StoredImage> {
     if (oldWidget.path != widget.path) _url = ref.read(imageRepositoryProvider).urlFor(widget.path);
   }
 
-  void _openViewer(String url) {
-    Navigator.of(context, rootNavigator: true).push(
+  Future<void> _openViewer() async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final url = await ref.read(imageRepositoryProvider).urlFor(widget.path);
+    navigator.push(
       MaterialPageRoute<void>(fullscreenDialog: true, builder: (context) => _ImageViewer(url: url)),
     );
   }
@@ -45,7 +47,7 @@ class _StoredImageState extends ConsumerState<StoredImage> {
         if (url == null) return ColoredBox(color: context.tones.softFill);
 
         return GestureDetector(
-          onTap: () => _openViewer(url),
+          onTap: _openViewer,
           child: Image.network(url, fit: widget.fit, alignment: widget.alignment),
         );
       },
@@ -56,10 +58,12 @@ class _StoredImageState extends ConsumerState<StoredImage> {
 class _ImageViewer extends StatelessWidget {
   const _ImageViewer({required this.url});
 
-  final String url;
+  final String? url;
 
   @override
   Widget build(BuildContext context) {
+    final link = url;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -68,7 +72,29 @@ class _ImageViewer extends StatelessWidget {
         automaticallyImplyLeading: false,
         actions: const [CloseButton()],
       ),
-      body: Center(child: InteractiveViewer(maxScale: 5, child: Image.network(url))),
+      body: Center(
+        child: link == null
+            ? const _ImageProblem()
+            : InteractiveViewer(
+                maxScale: 5,
+                child: Image.network(
+                  link,
+                  loadingBuilder: (context, child, progress) {
+                    return progress == null ? child : const CircularProgressIndicator(color: Colors.white);
+                  },
+                  errorBuilder: (context, error, stack) => const _ImageProblem(),
+                ),
+              ),
+      ),
     );
+  }
+}
+
+class _ImageProblem extends StatelessWidget {
+  const _ImageProblem();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text('This picture could not be opened.', style: TextStyle(color: Colors.white70, fontSize: 14));
   }
 }

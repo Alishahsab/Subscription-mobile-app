@@ -35,7 +35,8 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _dayKeys = <String, GlobalKey>{};
   final _listKey = GlobalKey();
-  late bool _loadingHistory = !ref.read(syncProvider).chatHistoryReady(widget.customerId);
+  bool _hasOlder = false;
+  bool _loadingOlder = false;
   String _floatingDay = '';
   bool _showFloatingDay = false;
   Timer? _dayTimer;
@@ -43,7 +44,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _checkOlder();
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
   }
 
@@ -57,15 +58,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (mounted) ref.read(adminActionsProvider).markConversationRead(widget.customerId);
   }
 
-  Future<void> _loadHistory() async {
-    if (!_loadingHistory) return;
-    try {
-      await ref.read(syncProvider).loadChatHistory(widget.customerId);
-    } catch (_) {
-      return;
-    } finally {
-      if (mounted) setState(() => _loadingHistory = false);
-    }
+  Future<void> _checkOlder() async {
+    final found = await ref.read(syncProvider).hasOlderChat(widget.customerId);
+    if (mounted && found) setState(() => _hasOlder = true);
+  }
+
+  Future<void> _showOlder() async {
+    setState(() => _loadingOlder = true);
+    final loaded = await ref.read(syncProvider).loadOlderChat(widget.customerId);
+    if (!mounted) return;
+    setState(() {
+      _loadingOlder = false;
+      if (loaded) _hasOlder = false;
+    });
+  }
+
+  Widget _olderButton(AppTones tones) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Center(
+        child: OutlinedButton(
+          onPressed: _loadingOlder ? null : _showOlder,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: tones.title,
+            side: BorderSide(color: tones.border),
+            shape: const StadiumBorder(),
+            visualDensity: VisualDensity.compact,
+          ),
+          child: Text(_loadingOlder ? 'Loading…' : 'Show older messages', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
+      ),
+    );
   }
 
   bool _onScroll(ScrollNotification notification) {
@@ -121,10 +144,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               children: [
                 if (messages.isEmpty)
                   Center(
-                    child: Text(
-                      _loadingHistory ? 'Loading messages…' : 'No messages yet.',
-                      style: TextStyle(color: tones.faint, fontSize: 12.5),
-                    ),
+                    child: _hasOlder
+                        ? _olderButton(tones)
+                        : Text('No messages yet.', style: TextStyle(color: tones.faint, fontSize: 12.5)),
                   )
                 else
                   NotificationListener<ScrollNotification>(
@@ -133,14 +155,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       reverse: true,
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      itemCount: messages.length + (_loadingHistory ? 1 : 0),
+                      itemCount: messages.length + (_hasOlder ? 1 : 0),
                       itemBuilder: (context, index) {
-                        if (index == messages.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Center(child: Text('Loading messages…', style: TextStyle(color: tones.faint, fontSize: 12))),
-                          );
-                        }
+                        if (index == messages.length) return _olderButton(tones);
                         return _buildMessage(messages, messages.length - 1 - index, orders, now);
                       },
                     ),

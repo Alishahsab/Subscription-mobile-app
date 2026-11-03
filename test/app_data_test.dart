@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:premium_store_admin/data/models/db_row.dart';
 import 'package:premium_store_admin/data/sync/app_data.dart';
+import 'package:premium_store_admin/data/sync/chat_window.dart';
 import 'package:premium_store_admin/data/sync/db_table.dart';
 import 'package:premium_store_admin/data/sync/local_copy.dart';
 
@@ -56,20 +57,22 @@ void main() {
     expect(data.messages.map((item) => item.id), ['b', 'a']);
   });
 
-  test('chat older than 15 days is removed unless the customer has an unused code', () {
-    const day = Duration.millisecondsPerDay;
-    final now = 100 * day;
-    var data = const AppData().withAllRows(DbTable.messages, [
-      message('old', now - 16 * day),
-      message('kept', now - 16 * day, customerId: 'c2'),
-      message('recent', now - day),
-    ]);
-    data = data.withAllRows(DbTable.orders, [order('PS-1', codeUnused: true, customerId: 'c2')]);
+  test('chats show today and yesterday in Pakistan time, not the day before', () {
+    final now = DateTime.utc(2026, 11, 3, 5).millisecondsSinceEpoch;
+    final from = chatShownFrom(now);
 
-    expect(data.withoutOldMessages(now).messages.map((item) => item.id), ['kept', 'recent']);
+    expect(from, DateTime.utc(2026, 11, 1, 19).millisecondsSinceEpoch);
+    var data = const AppData().withAllRows(DbTable.messages, [
+      message('first day', DateTime.utc(2026, 11, 1, 12).millisecondsSinceEpoch),
+      message('yesterday', DateTime.utc(2026, 11, 2, 12).millisecondsSinceEpoch),
+      message('today', DateTime.utc(2026, 11, 3, 4).millisecondsSinceEpoch),
+    ]);
+    data = data.withMessagesFrom(from);
+
+    expect(data.messages.map((item) => item.id), ['yesterday', 'today']);
   });
 
-  test('a saved copy keeps the data, and only two days of messages', () {
+  test('a saved copy keeps the data, and only today and yesterday of messages', () {
     const day = Duration.millisecondsPerDay;
     final now = 100 * day;
     var data = const AppData().withAllRows(DbTable.orders, [order('PS-1')]);

@@ -114,4 +114,18 @@ void main() {
     expect(barsFor(1000), 2);
     expect(barsFor(3000), 1);
   });
+
+  test('a chat older than two days stays in the list before its messages are loaded', () {
+    const day = Duration.millisecondsPerDay;
+    var data = const AppData().withAllRows(DbTable.customers, [customer('c1'), customer('c2')]);
+    data = data.withAllRows(DbTable.conversations, [
+      {'customer_id': 'c1', 'stage': 'menu', 'unread_by_admin': 0, 'last_message_at': now - 5 * day},
+      {'customer_id': 'c2', 'stage': 'menu', 'unread_by_admin': 0, 'last_message_at': now - 20 * day},
+    ]);
+
+    final items = chatItems(data, active: false, now: now);
+
+    expect(items.map((item) => item.customerId), ['c1']);
+    expect(items.single.subtitle, '');
+  });
 }
