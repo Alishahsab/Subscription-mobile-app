@@ -2,6 +2,15 @@
 
 What was done each day, newest first.
 
+## 4 Nov 2026 – Older weeks and fresher lists
+
+- The completed orders chart has arrows and swipe to see earlier weeks, back to the first completed order.
+- A notification refreshes the lists at once, and opening a notification loads fresh data first.
+- Approve closes as soon as the server answers, and a card that leaves the inbox fades out instead of jumping.
+- If the live connection drops, the app joins again after 3 seconds and loads what it missed.
+- A failed check is tried again after 5 seconds instead of waiting a minute, and coming back to the app always checks.
+- Text is 10% smaller, a very large phone font is capped, and buttons are a little tighter.
+
 ## 2 Nov 2026 – Less data download
 
 - Chats open with today and yesterday only; a Show older messages button loads the rest when asked.

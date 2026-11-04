@@ -21,8 +21,8 @@ import 'server_clock.dart';
 
 const _refreshEvery = Duration(minutes: 1);
 const _loadRetry = Duration(seconds: 5);
+const _reconnectDelay = Duration(seconds: 3);
 const _saveDelay = Duration(milliseconds: 1500);
-const _catchUpAfterHidden = Duration(seconds: 10);
 const _fullLoadEvery = Duration(hours: 24);
 const _changesOverlap = Duration(seconds: 15);
 const _missingColumn = '42703';
@@ -49,6 +49,8 @@ class SyncService with WidgetsBindingObserver {
   RealtimeChannel? _channel;
   Timer? _refreshTimer;
   Timer? _loadTimer;
+  Timer? _retryTimer;
+  Timer? _reconnectTimer;
   Timer? _saveTimer;
   DateTime? _hiddenSince;
   int? _changesSince;
@@ -89,7 +91,9 @@ class SyncService with WidgetsBindingObserver {
     await _outbox.send();
 
     final fresh = copy != null && _changesSince != null && _fullLoadIsRecent;
-    if (!fresh || await _loadChanges() == _ChangesResult.unsupported) await _loadEverything();
+    final result = fresh ? await _loadChanges() : _ChangesResult.unsupported;
+    if (result == _ChangesResult.failed) _retrySoon();
+    if (result == _ChangesResult.unsupported) await _loadEverything();
 
     if (_userId == null) return;
     _listen();
@@ -102,6 +106,8 @@ class SyncService with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _loadTimer?.cancel();
+    _retryTimer?.cancel();
+    _reconnectTimer?.cancel();
     _saveTimer?.cancel();
     _outbox.stop();
     _loadedChats.clear();
@@ -189,9 +195,16 @@ class SyncService with WidgetsBindingObserver {
 
     if (!fullLoad && _changesSupported && _fullLoadIsRecent) {
       final result = await _loadChanges();
+      if (result == _ChangesResult.failed) _retrySoon();
       if (result != _ChangesResult.unsupported) return;
     }
     await _loadEverything(retry: false);
+  }
+
+  void _retrySoon() {
+    if (_userId == null) return;
+    _retryTimer?.cancel();
+    _retryTimer = Timer(_loadRetry, _refreshIfVisible);
   }
 
   @override
@@ -200,10 +213,9 @@ class SyncService with WidgetsBindingObserver {
       _hiddenSince = DateTime.now();
       _saveNow();
     }
-    if (state == AppLifecycleState.resumed) {
-      final hiddenSince = _hiddenSince;
+    if (state == AppLifecycleState.resumed && _hiddenSince != null) {
       _hiddenSince = null;
-      if (hiddenSince != null && DateTime.now().difference(hiddenSince) > _catchUpAfterHidden) catchUp();
+      catchUp();
     }
   }
 
@@ -340,11 +352,27 @@ class SyncService with WidgetsBindingObserver {
 
     var subscribedBefore = false;
     channel.subscribe((status, [_]) {
-      if (status != RealtimeSubscribeStatus.subscribed) return;
+      if (status != RealtimeSubscribeStatus.subscribed) {
+        _reconnectSoon(channel);
+        return;
+      }
       if (subscribedBefore) catchUp();
       subscribedBefore = true;
     });
     _channel = channel;
+  }
+
+  void _reconnectSoon(RealtimeChannel broken) {
+    if (_userId == null || _channel != broken) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_reconnectDelay, () async {
+      if (_userId == null || _channel != broken) return;
+      _channel = null;
+      await _client.removeChannel(broken);
+      if (_userId == null) return;
+      _listen();
+      catchUp();
+    });
   }
 
   void _onRemoteChange(DbTable table, PostgresChangePayload payload) {

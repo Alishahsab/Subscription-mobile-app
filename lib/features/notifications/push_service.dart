@@ -22,6 +22,7 @@ class PushService {
   final _local = FlutterLocalNotificationsPlugin();
   bool _ready = false;
   ValueChanged<PushTarget>? _onOpen;
+  VoidCallback? _onAlert;
   PushTarget? _waiting;
   StreamSubscription<String>? _tokenChanges;
 
@@ -41,6 +42,7 @@ class PushService {
       await _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(alertsChannel);
 
       FirebaseMessaging.onBackgroundMessage(showAlertInBackground);
+      FirebaseMessaging.onMessage.listen((_) => _onAlert?.call());
       FirebaseMessaging.onMessageOpenedApp.listen((message) => _open(message.data));
       final first = await FirebaseMessaging.instance.getInitialMessage();
       if (first != null) _open(first.data);
@@ -53,14 +55,18 @@ class PushService {
     }
   }
 
-  void listen(ValueChanged<PushTarget> onOpen) {
+  void listen(ValueChanged<PushTarget> onOpen, {VoidCallback? onAlert}) {
     _onOpen = onOpen;
+    _onAlert = onAlert;
     final waiting = _waiting;
     _waiting = null;
     if (waiting != null) onOpen(waiting);
   }
 
-  void stopListening() => _onOpen = null;
+  void stopListening() {
+    _onOpen = null;
+    _onAlert = null;
+  }
 
   Future<void> registerDevice() async {
     if (!_ready) return;

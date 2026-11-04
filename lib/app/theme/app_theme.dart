@@ -35,7 +35,12 @@ class AppTheme {
   }
 
   static ThemeData _theme(ColorScheme colors, Color background) {
-    final theme = ThemeData(useMaterial3: true, colorScheme: colors, scaffoldBackgroundColor: background);
+    final theme = ThemeData(
+      useMaterial3: true,
+      colorScheme: colors,
+      scaffoldBackgroundColor: background,
+      visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
+    );
     return theme.copyWith(textTheme: GoogleFonts.plusJakartaSansTextTheme(theme.textTheme));
   }
 }

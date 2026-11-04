@@ -98,7 +98,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  Expanded(child: CompletedChart(days: completedByDay(data.orders, now))),
+                                  Expanded(child: CompletedChart(orders: data.orders, now: now)),
                                   const SizedBox(height: 12),
                                   CustomerListCard(count: data.customers.length, onTap: () => context.push(AppRoutes.customers)),
                                 ],

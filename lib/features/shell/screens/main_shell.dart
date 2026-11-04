@@ -43,7 +43,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     _sync = ref.read(syncProvider);
     _sync.start();
     _problems = _sync.outbox.problems.listen(_showProblem);
-    PushService.instance.listen(_openFromNotification);
+    PushService.instance.listen(_openFromNotification, onAlert: _sync.catchUp);
     PushService.instance.registerDevice().then((_) => askForBackgroundAccess());
   }
 
@@ -72,6 +72,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   void _openFromNotification(PushTarget target) {
+    _sync.catchUp();
     WidgetsBinding.instance.addPostFrameCallback((_) => _showTarget(target));
   }
 

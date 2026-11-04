@@ -34,6 +34,11 @@ String formatDate(int time) {
   return '${date.day} ${_months[date.month - 1]} ${date.year}';
 }
 
+String shortDate(int time) {
+  final date = _pakistan(time);
+  return '${date.day} ${_months[date.month - 1]}';
+}
+
 String formatDateTime(int time) => '${formatDate(time)}, ${formatTime(time)}';
 
 String chatDayLabel(int time, int now) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_info.dart';
+import '../core/widgets/app_text_size.dart';
 import '../features/splash/screens/splash_screen.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -30,7 +31,7 @@ class _PremiumStoreAppState extends ConsumerState<PremiumStoreApp> {
       builder: (context, child) {
         return Stack(
           children: [
-            child!,
+            AppTextSize(child: child!),
             if (!_splashGone)
               IgnorePointer(
                 ignoring: _splashDone,

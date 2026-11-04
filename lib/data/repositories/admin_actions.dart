@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -80,7 +82,7 @@ class AdminActions {
       'admin_approve_order',
       params: {'order_id': orderId, 'code_message': message, 'code': code},
     );
-    await _sync.catchUp();
+    unawaited(_sync.catchUp());
     return result;
   }
 

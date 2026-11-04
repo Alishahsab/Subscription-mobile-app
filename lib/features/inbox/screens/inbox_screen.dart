@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router.dart';
 import '../../../core/widgets/category_chips.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/fade_out_list.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/slide_switcher.dart';
 import '../../../core/widgets/swipe_area.dart';
@@ -13,6 +14,7 @@ import '../../../data/sync/data_notifier.dart';
 import '../../../data/sync/now_provider.dart';
 import '../controllers/inbox_lists.dart';
 import '../controllers/inbox_navigation.dart';
+import '../models/inbox_item.dart';
 import '../widgets/inbox_card.dart';
 
 const _emptyText = {
@@ -103,17 +105,14 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                 index: keys.indexOf(tab),
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (notification) => _onScroll(notification, items.length),
-                  child: ListView.separated(
-                    key: PageStorageKey(tab),
+                  child: FadeOutList<InboxItem>(
+                    key: ValueKey(words),
+                    storageKey: PageStorageKey(tab),
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
-                    itemCount: shown.isEmpty ? 1 : shown.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      if (shown.isEmpty) {
-                        return EmptyState(icon: Icons.inbox_rounded, title: 'Nothing here', description: words.isNotEmpty ? 'No match for your search.' : _emptyText[tab]);
-                      }
-                      return InboxCard(key: ValueKey(shown[index].key), tab: tab, item: shown[index], now: now);
-                    },
+                    items: shown,
+                    keyOf: (item) => item.key,
+                    itemBuilder: (item) => InboxCard(tab: tab, item: item, now: now),
+                    empty: EmptyState(icon: Icons.inbox_rounded, title: 'Nothing here', description: words.isNotEmpty ? 'No match for your search.' : _emptyText[tab]),
                   ),
                 ),
               ),
