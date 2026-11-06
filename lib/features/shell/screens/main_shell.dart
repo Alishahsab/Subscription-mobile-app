@@ -124,8 +124,9 @@ class _MainShellState extends ConsumerState<MainShell> {
     final dark = theme.brightness == Brightness.dark;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final data = ref.watch(dataProvider);
-    final counts = countInboxTabs(data);
+    final covered = !(ModalRoute.isCurrentOf(context) ?? true);
+    final loaded = ref.watch(dataProvider.select((data) => data.loaded));
+    final counts = ref.watch(inboxCountsProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -140,23 +141,27 @@ class _MainShellState extends ConsumerState<MainShell> {
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _goBack();
         },
-        child: Scaffold(
-          body: Stack(
-            children: [
-              widget.shell,
-              if (!data.loaded) const Positioned.fill(child: _LoadingCover()),
-              if (data.loaded && !keyboardOpen)
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 22 + bottomInset,
-                  child: FloatingTabBar(
-                    index: widget.shell.currentIndex,
-                    onSelect: _selectTab,
-                    inboxCount: (counts['pending'] ?? 0) + (counts['issues'] ?? 0),
+        child: MediaQuery.removeViewInsets(
+          context: context,
+          removeBottom: covered,
+          child: Scaffold(
+            body: Stack(
+              children: [
+                widget.shell,
+                if (!loaded) const Positioned.fill(child: _LoadingCover()),
+                if (loaded && !keyboardOpen)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 22 + bottomInset,
+                    child: FloatingTabBar(
+                      index: widget.shell.currentIndex,
+                      onSelect: _selectTab,
+                      inboxCount: (counts['pending'] ?? 0) + (counts['issues'] ?? 0),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

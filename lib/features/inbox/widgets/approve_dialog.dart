@@ -74,6 +74,8 @@ class _ApproveDialogState extends ConsumerState<_ApproveDialog> {
     final canApprove = hasMessage && codeReady && duplicate == null && !_busy;
 
     return AlertDialog(
+      alignment: Alignment.topCenter,
+      insetPadding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
       title: const Text('Approve payment'),
       scrollable: true,
       content: Column(

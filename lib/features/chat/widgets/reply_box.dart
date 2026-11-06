@@ -73,7 +73,7 @@ class _ReplyBoxState extends ConsumerState<ReplyBox> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final tones = context.tones;
-    final quickReplies = ref.watch(dataProvider).config?.quickReplies ?? const <String>[];
+    final quickReplies = ref.watch(dataProvider.select((data) => data.config?.quickReplies)) ?? const <String>[];
     final canSend = _controller.text.trim().isNotEmpty;
 
     return Container(

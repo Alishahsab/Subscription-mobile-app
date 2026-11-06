@@ -97,12 +97,13 @@ class SettingsRow extends StatelessWidget {
             ),
           ),
           if (valueText != null)
-            Flexible(
+            Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(left: 10),
                 child: Text(
                   valueText,
                   maxLines: 1,
+                  textAlign: TextAlign.end,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: tones.title, fontSize: 13, fontWeight: FontWeight.w600),
                 ),

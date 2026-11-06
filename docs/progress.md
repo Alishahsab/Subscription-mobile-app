@@ -2,6 +2,16 @@
 
 What was done each day, newest first.
 
+## 6 Nov 2026 – Saved bank accounts and less lag
+
+- The Bank account page keeps saved accounts; tapping one puts it in use, and the account in use can be saved or removed.
+- Store name and other rows with a value keep the arrow at the right edge.
+- Swiping back from the first Bot chat tab opens the Pending tab of the inbox.
+- The chat has a round back button like the other screens.
+- The chat only rebuilds for its own customer, the day label only changes when the day does, and the reply box no longer rebuilds for unrelated data.
+- Screens behind an open chat no longer resize while the keyboard opens or closes, and inbox counts are worked out once per data change.
+- The Approve and Reply pop-ups open near the top, so the keyboard no longer pushes them up with a jump.
+
 ## 4 Nov 2026 – Older weeks and fresher lists
 
 - The completed orders chart has arrows and swipe to see earlier weeks, back to the first completed order.

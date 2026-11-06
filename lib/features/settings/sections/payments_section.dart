@@ -9,6 +9,7 @@ import '../../../data/models/store_config.dart';
 import '../controllers/settings_draft.dart';
 import '../widgets/guide_steps_editor.dart';
 import '../widgets/message_pages.dart';
+import '../widgets/saved_banks.dart';
 import '../widgets/settings_page.dart';
 import '../widgets/settings_ui.dart';
 import '../widgets/steps_editor.dart';
@@ -103,6 +104,7 @@ void _openBank(BuildContext context) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SavedBanks(draft: draft, update: update),
           SettingsGroup(
             children: [
               InputBlock(label: 'Bank name', child: SettingsInput(value: bank['bankName'] as String, onChanged: (value) => set('bankName', cleanLetters(value)))),

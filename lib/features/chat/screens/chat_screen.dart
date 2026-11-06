@@ -110,10 +110,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
-    setState(() {
-      _floatingDay = label;
-      _showFloatingDay = label.isNotEmpty;
-    });
+    final show = label.isNotEmpty;
+    if (label != _floatingDay || show != _showFloatingDay) {
+      setState(() {
+        _floatingDay = label;
+        _showFloatingDay = show;
+      });
+    }
     _dayTimer?.cancel();
     _dayTimer = Timer(_floatingDayTime, () {
       if (mounted) setState(() => _showFloatingDay = false);
@@ -128,10 +131,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
 
     final tones = context.tones;
-    final data = ref.watch(dataProvider);
     final now = watchNow(ref);
-    final messages = data.messagesOf(widget.customerId);
-    final orders = data.ordersOf(widget.customerId);
+    final messages = ref.watch(dataProvider.select((data) => data.messagesOf(widget.customerId)));
+    final orders = ref.watch(dataProvider.select((data) => data.ordersOf(widget.customerId)));
 
     return Scaffold(
       backgroundColor: tones.chatBackground,
@@ -221,9 +223,8 @@ class _ChatHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final tones = context.tones;
-    final data = ref.watch(dataProvider);
-    final customer = data.customer(customerId);
-    final active = isCustomerActive(data, customerId, now);
+    final customer = ref.watch(dataProvider.select((data) => data.customer(customerId)));
+    final active = ref.watch(dataProvider.select((data) => isCustomerActive(data, customerId, now)));
 
     return Container(
       padding: EdgeInsets.fromLTRB(12, MediaQuery.paddingOf(context).top + 8, 12, 8),
@@ -233,11 +234,12 @@ class _ChatHeader extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          IconButton(
+          IconButton.filled(
             onPressed: () => context.pop(),
-            icon: Icon(Icons.chevron_left_rounded, color: tones.title),
+            style: IconButton.styleFrom(backgroundColor: tones.border, foregroundColor: tones.title),
+            icon: const Icon(Icons.chevron_left_rounded),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 10),
           CustomerAvatar(customerId: customerId, size: 46),
           const SizedBox(width: 12),
           Expanded(

@@ -61,7 +61,7 @@ class _BotChatScreenState extends ConsumerState<BotChatScreen> {
       _selectFilter(keys[index]);
     } else {
       final tabs = ref.read(dataProvider).config?.inboxTabs ?? defaultInboxTabs;
-      ref.read(inboxTabProvider.notifier).state = tabs.last['key'];
+      ref.read(inboxTabProvider.notifier).state = tabs.first['key'];
       context.go(AppRoutes.inbox);
     }
   }

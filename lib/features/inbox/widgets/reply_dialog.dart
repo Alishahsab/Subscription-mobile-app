@@ -71,6 +71,8 @@ class _ReplyDialogState extends ConsumerState<_ReplyDialog> {
     final canSend = !_busy && (_text.trim().isNotEmpty || _attachments.isNotEmpty);
 
     return AlertDialog(
+      alignment: Alignment.topCenter,
+      insetPadding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
       title: const Text('Reply'),
       scrollable: true,
       content: Column(
