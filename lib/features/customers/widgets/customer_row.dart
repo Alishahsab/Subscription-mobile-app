@@ -23,10 +23,9 @@ class CustomerRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final tones = context.tones;
-    final data = ref.watch(dataProvider);
+    final (active, activeAt) = ref.watch(dataProvider.select((data) => (isCustomerActive(data, customer.id, now), lastActivityAt(data, customer.id))));
     final whatsapp = customer.whatsapp;
     final hasWhatsApp = whatsapp != null && whatsapp.isNotEmpty;
-    final active = isCustomerActive(data, customer.id, now);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -71,7 +70,7 @@ class CustomerRow extends ConsumerWidget {
                         children: [
                           Text(customer.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11.5)),
                           Text(
-                            active ? 'Active now' : timeAgo(lastActivityAt(data, customer.id), now),
+                            active ? 'Active now' : timeAgo(activeAt, now),
                             style: TextStyle(
                               color: active ? tones.greenText : tones.faint,
                               fontSize: 11,

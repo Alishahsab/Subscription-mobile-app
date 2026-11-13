@@ -34,7 +34,7 @@ int lastActivityAt(AppData data, String customerId) {
 }
 
 bool isCustomerActive(AppData data, String customerId, int now) {
-  if (data.customers.any((customer) => customer.id == customerId && customer.blocked)) return false;
+  if (data.customer(customerId)?.blocked ?? false) return false;
   final minutes = data.config?.inactiveMinutes ?? 20;
   return now - lastActivityAt(data, customerId) < minutes * Duration.millisecondsPerMinute;
 }
@@ -175,16 +175,17 @@ bool _hasChat(AppData data, Conversation conversation, int now) {
   return data.messagesOf(conversation.customerId).isNotEmpty || now - conversation.lastMessageAt < _chatKept.inMilliseconds;
 }
 
+Iterable<Conversation> _chats(AppData data, {required bool active, required int now}) {
+  return data.conversations.values.where((item) => _hasChat(data, item, now) && isCustomerActive(data, item.customerId, now) == active);
+}
+
 List<InboxItem> chatItems(AppData data, {required bool active, required int now}) {
-  final conversations = data.conversations.values
-      .where((item) => _hasChat(data, item, now))
-      .where((item) => isCustomerActive(data, item.customerId, now) == active)
-      .toList()
-    ..sort((a, b) => lastActivityAt(data, b.customerId).compareTo(lastActivityAt(data, a.customerId)));
+  final activity = {for (final item in _chats(data, active: active, now: now)) item: lastActivityAt(data, item.customerId)};
+  final conversations = activity.keys.toList()..sort((a, b) => activity[b]!.compareTo(activity[a]!));
 
   return conversations.map((conversation) {
     final customerId = conversation.customerId;
-    final activeAt = lastActivityAt(data, customerId);
+    final activeAt = activity[conversation]!;
     final lastMessage = data.messagesOf(customerId).lastOrNull;
     final prefix = lastMessage == null || lastMessage.sender == 'customer' ? '' : 'You: ';
 
@@ -235,6 +236,15 @@ List<InboxItem> cancelledItems(AppData data, int now) {
   }).toList();
 }
 
+Map<String, int> countBotFilters(AppData data, int now) {
+  return {
+    BotFilter.activeChats: _chats(data, active: true, now: now).length,
+    BotFilter.activeOrders: data.orders.where((order) => canStillPay(order, now)).length,
+    BotFilter.cancelled: data.orders.where((order) => order.status == 'cancelled' || order.status == 'expired').length,
+    BotFilter.inactiveChats: _chats(data, active: false, now: now).length,
+  };
+}
+
 List<InboxItem> botItems(AppData data, String filter, int now) {
   switch (filter) {
     case BotFilter.activeOrders:
@@ -249,7 +259,7 @@ List<InboxItem> botItems(AppData data, String filter, int now) {
 }
 
 bool matchesSearch(AppData data, InboxItem item, String words) {
-  final order = data.orders.where((entry) => entry.id == item.key).firstOrNull;
+  final order = data.order(item.key);
   final text = [item.title, item.tag, item.subtitle, order?.senderName ?? '', order?.code ?? ''].join(' ').toLowerCase();
   return text.contains(words);
 }

@@ -1,9 +1,13 @@
 import '../models/customer.dart';
 import '../models/message.dart';
 import '../models/order.dart';
+import '../models/ticket.dart';
 import 'app_data.dart';
 
 final _customersById = Expando<Map<String, Customer>>();
+final _ordersById = Expando<Map<String, Order>>();
+final _ticketsById = Expando<Map<String, Ticket>>();
+final _openIssueCustomers = Expando<Set<String>>();
 final _ordersByCustomer = Expando<Map<String, List<Order>>>();
 final _messagesByCustomer = Expando<Map<String, List<Message>>>();
 final _lastSentByCustomer = Expando<Map<String, int>>();
@@ -12,6 +16,24 @@ extension AppLookups on AppData {
   Customer? customer(String id) {
     final lookup = _customersById[customers] ??= {for (final item in customers) item.id: item};
     return lookup[id];
+  }
+
+  Order? order(String id) {
+    final lookup = _ordersById[orders] ??= {for (final item in orders) item.id: item};
+    return lookup[id];
+  }
+
+  Ticket? ticket(String id) {
+    final lookup = _ticketsById[tickets] ??= {for (final item in tickets) item.id: item};
+    return lookup[id];
+  }
+
+  bool hasOpenIssue(String customerId) {
+    final lookup = _openIssueCustomers[tickets] ??= {
+      for (final item in tickets)
+        if (item.kind == 'support' && item.status == 'open') item.customerId,
+    };
+    return lookup.contains(customerId);
   }
 
   List<Order> ordersOf(String customerId) {

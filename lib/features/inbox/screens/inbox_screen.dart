@@ -64,7 +64,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final data = ref.watch(dataProvider);
+    final data = watchDataWhenShown(context, ref);
     final now = watchNow(ref);
     final tabs = data.config?.inboxTabs ?? defaultInboxTabs;
     final keys = tabs.map((tab) => tab['key']!).toList();

@@ -39,12 +39,11 @@ class InboxCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(dataProvider);
     final colors = Theme.of(context).colorScheme;
     final tones = context.tones;
 
-    final order = data.orders.where((entry) => entry.id == item.key).firstOrNull;
-    final ticket = tab == 'issues' ? data.tickets.where((entry) => entry.id == item.key).firstOrNull : null;
+    final order = ref.watch(dataProvider.select((data) => data.order(item.key)));
+    final ticket = ref.watch(dataProvider.select((data) => tab == 'issues' ? data.ticket(item.key) : null));
     final showsCode = (tab == 'completed' || tab == 'unused') && order?.code != null;
     final screenshot = showsCode ? null : (order?.screenshot ?? ticket?.screenshot);
 
@@ -302,8 +301,7 @@ class _CardButtons extends ConsumerWidget {
     final actions = ref.read(adminActionsProvider);
     final current = order;
     final issue = ticket;
-    final data = ref.watch(dataProvider);
-    final customer = data.customer(item.customerId);
+    final customer = ref.watch(dataProvider.select((data) => data.customer(item.customerId)));
     final customerName = customer == null ? 'this customer' : customerTitle(customer);
 
     return Wrap(

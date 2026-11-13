@@ -25,3 +25,30 @@ class GroupedListCard extends StatelessWidget {
     );
   }
 }
+
+class GroupedListItem extends StatelessWidget {
+  const GroupedListItem({super.key, required this.first, required this.last, required this.child});
+
+  final bool first;
+  final bool last;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    const corner = Radius.circular(24);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.vertical(top: first ? corner : Radius.zero, bottom: last ? corner : Radius.zero),
+      ),
+      child: Column(
+        children: [
+          if (!first) Divider(height: 1, color: context.tones.border),
+          child,
+        ],
+      ),
+    );
+  }
+}

@@ -47,6 +47,10 @@ SavedCopy? copyFromJson(DbRow json) {
   return SavedCopy(data, json['changesSince'] as int?, json['lastFullLoadAt'] as int);
 }
 
+Future<String> _encodeInBackground(AppData data, int? changesSince, int lastFullLoadAt, int now) {
+  return Isolate.run(() => jsonEncode(copyToJson(data, changesSince, lastFullLoadAt, now)));
+}
+
 class LocalCopy {
   File? _file;
 
@@ -64,12 +68,12 @@ class LocalCopy {
     }
   }
 
-  Future<void> save(DbRow json) async {
+  Future<void> save(AppData data, int? changesSince, int lastFullLoadAt, int now) async {
     final file = _file;
     if (file == null) return;
 
     try {
-      final text = await Isolate.run(() => jsonEncode(json));
+      final text = await _encodeInBackground(data, changesSince, lastFullLoadAt, now);
       await file.writeAsString(text, flush: true);
     } catch (_) {
       await remove();

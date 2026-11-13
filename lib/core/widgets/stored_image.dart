@@ -4,51 +4,109 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme/app_tones.dart';
 import '../../data/repositories/image_repository.dart';
 
-class StoredImage extends ConsumerStatefulWidget {
+typedef PictureProblem = Widget Function(String? reason, VoidCallback retry);
+
+class StoredImage extends StatelessWidget {
   const StoredImage({super.key, required this.path, this.fit = BoxFit.cover, this.alignment = Alignment.topCenter});
 
   final String path;
   final BoxFit fit;
   final Alignment alignment;
 
-  @override
-  ConsumerState<StoredImage> createState() => _StoredImageState();
-}
-
-class _StoredImageState extends ConsumerState<StoredImage> {
-  late Future<String?> _url;
-
-  @override
-  void initState() {
-    super.initState();
-    _url = ref.read(imageRepositoryProvider).urlFor(widget.path);
-  }
-
-  @override
-  void didUpdateWidget(StoredImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.path != widget.path) _url = ref.read(imageRepositoryProvider).urlFor(widget.path);
-  }
-
-  Future<void> _openViewer() async {
-    final navigator = Navigator.of(context, rootNavigator: true);
-    final url = await ref.read(imageRepositoryProvider).urlFor(widget.path);
-    navigator.push(
-      MaterialPageRoute<void>(fullscreenDialog: true, builder: (context) => _ImageViewer(url: url)),
+  void _openViewer(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(fullscreenDialog: true, builder: (context) => _ImageViewer(path: path)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _url,
-      builder: (context, snapshot) {
-        final url = snapshot.data;
-        if (url == null) return ColoredBox(color: context.tones.softFill);
+    final fill = ColoredBox(color: context.tones.softFill);
 
-        return GestureDetector(
-          onTap: _openViewer,
-          child: Image.network(url, fit: widget.fit, alignment: widget.alignment),
+    return GestureDetector(
+      onTap: () => _openViewer(context),
+      child: _Picture(
+        path: path,
+        fit: fit,
+        alignment: alignment,
+        loading: fill,
+        problem: (reason, retry) => GestureDetector(
+          onTap: retry,
+          child: ColoredBox(
+            color: context.tones.softFill,
+            child: Center(child: Icon(Icons.refresh_rounded, color: context.tones.faint)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Picture extends ConsumerStatefulWidget {
+  const _Picture({required this.path, required this.loading, required this.problem, this.fit, this.alignment = Alignment.center});
+
+  final String path;
+  final BoxFit? fit;
+  final Alignment alignment;
+  final Widget loading;
+  final PictureProblem problem;
+
+  @override
+  ConsumerState<_Picture> createState() => _PictureState();
+}
+
+class _PictureState extends ConsumerState<_Picture> {
+  late Future<ImageProvider?> _image = _load();
+  bool _download = false;
+
+  ImageRepository get _images => ref.read(imageRepositoryProvider);
+
+  Future<ImageProvider?> _load() async {
+    if (!_download) {
+      final url = await _images.urlFor(widget.path);
+      if (url != null) return NetworkImage(url);
+    }
+    final bytes = await _images.download(widget.path);
+    return bytes == null ? null : MemoryImage(bytes);
+  }
+
+  void _retry({bool download = false}) {
+    if (!mounted) return;
+    setState(() {
+      _download = download;
+      _image = _load();
+    });
+  }
+
+  @override
+  void didUpdateWidget(_Picture oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) _retry();
+  }
+
+  Widget _onBroken(ImageProvider image) {
+    if (image is NetworkImage && !_download) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _retry(download: true));
+      return widget.loading;
+    }
+    return widget.problem('The picture file is damaged', _retry);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ImageProvider?>(
+      future: _image,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) return widget.loading;
+
+        final image = snapshot.data;
+        if (image == null) return widget.problem(_images.problemOf(widget.path), _retry);
+
+        return Image(
+          image: image,
+          fit: widget.fit,
+          alignment: widget.alignment,
+          errorBuilder: (context, error, stack) => _onBroken(image),
         );
       },
     );
@@ -56,14 +114,12 @@ class _StoredImageState extends ConsumerState<StoredImage> {
 }
 
 class _ImageViewer extends StatelessWidget {
-  const _ImageViewer({required this.url});
+  const _ImageViewer({required this.path});
 
-  final String? url;
+  final String path;
 
   @override
   Widget build(BuildContext context) {
-    final link = url;
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -73,28 +129,45 @@ class _ImageViewer extends StatelessWidget {
         actions: const [CloseButton()],
       ),
       body: Center(
-        child: link == null
-            ? const _ImageProblem()
-            : InteractiveViewer(
-                maxScale: 5,
-                child: Image.network(
-                  link,
-                  loadingBuilder: (context, child, progress) {
-                    return progress == null ? child : const CircularProgressIndicator(color: Colors.white);
-                  },
-                  errorBuilder: (context, error, stack) => const _ImageProblem(),
-                ),
-              ),
+        child: InteractiveViewer(
+          maxScale: 5,
+          child: _Picture(
+            path: path,
+            loading: const CircularProgressIndicator(color: Colors.white),
+            problem: (reason, retry) => _ImageProblem(reason: reason, onRetry: retry),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _ImageProblem extends StatelessWidget {
-  const _ImageProblem();
+  const _ImageProblem({required this.reason, required this.onRetry});
+
+  final String? reason;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return const Text('This picture could not be opened.', style: TextStyle(color: Colors.white70, fontSize: 14));
+    final why = reason;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('This picture could not be opened.', style: TextStyle(color: Colors.white70, fontSize: 14)),
+        if (why != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(32, 6, 32, 0),
+            child: Text(why, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38, fontSize: 11.5)),
+          ),
+        const SizedBox(height: 14),
+        OutlinedButton(
+          onPressed: onRetry,
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white38)),
+          child: const Text('Try again'),
+        ),
+      ],
+    );
   }
 }

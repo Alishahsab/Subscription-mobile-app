@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -45,6 +46,20 @@ Color? _completionColor(AppData data, String customerId) {
   return null;
 }
 
+typedef _AvatarLook = ({String name, bool blocked, bool active, Color? order, bool issue, Color? completion});
+
+_AvatarLook _lookOf(AppData data, String customerId, int now) {
+  final customer = data.customer(customerId);
+  return (
+    name: customer?.email ?? '?',
+    blocked: customer?.blocked ?? false,
+    active: isCustomerActive(data, customerId, now),
+    order: _orderColor(data, customerId, now),
+    issue: data.hasOpenIssue(customerId),
+    completion: _completionColor(data, customerId),
+  );
+}
+
 class CustomerAvatar extends ConsumerWidget {
   const CustomerAvatar({super.key, required this.customerId, this.size = 52});
 
@@ -53,11 +68,8 @@ class CustomerAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(dataProvider);
     final now = watchNow(ref);
-    final customer = data.customer(customerId);
-    final hasIssue = data.tickets.any((item) => item.customerId == customerId && item.kind == 'support' && item.status == 'open');
-    final active = isCustomerActive(data, customerId, now);
+    final look = ref.watch(dataProvider.select((data) => _lookOf(data, customerId, now)));
     final surface = Theme.of(context).colorScheme.surface;
 
     final ring = (size * 0.17).roundToDouble();
@@ -77,14 +89,14 @@ class CustomerAvatar extends ConsumerWidget {
               width: ring,
               empty: context.tones.border,
               quarters: [
-                _orderColor(data, customerId, now),
+                look.order,
                 null,
-                hasIssue ? StatusColors.appIssue : null,
-                _completionColor(data, customerId),
+                look.issue ? StatusColors.appIssue : null,
+                look.completion,
               ],
             ),
           ),
-          _Initials(name: customer?.email ?? '?', size: size - ring * 2 - 2),
+          _Initials(name: look.name, size: size - ring * 2 - 2),
           Positioned(
             right: 0,
             bottom: 0,
@@ -92,13 +104,13 @@ class CustomerAvatar extends ConsumerWidget {
               width: dot,
               height: dot,
               decoration: BoxDecoration(
-                color: active ? StatusColors.activeChat : StatusColors.inactiveChat,
+                color: look.active ? StatusColors.activeChat : StatusColors.inactiveChat,
                 shape: BoxShape.circle,
                 border: Border.all(color: surface, width: 2),
               ),
             ),
           ),
-          if (customer?.blocked ?? false)
+          if (look.blocked)
             Positioned(
               left: size * 0.12,
               bottom: -size * 0.02,
@@ -165,5 +177,7 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter oldDelegate) => true;
+  bool shouldRepaint(_RingPainter oldDelegate) {
+    return oldDelegate.width != width || oldDelegate.empty != empty || !listEquals(oldDelegate.quarters, quarters);
+  }
 }

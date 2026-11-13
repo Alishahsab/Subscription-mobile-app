@@ -32,7 +32,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final data = ref.watch(dataProvider);
+    final data = watchDataWhenShown(context, ref);
     final now = watchNow(ref);
     final counts = countInboxTabs(data);
     final pending = counts['pending'] ?? 0;

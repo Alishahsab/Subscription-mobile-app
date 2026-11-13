@@ -2,6 +2,26 @@
 
 What was done each day, newest first.
 
+## 13 Nov 2026 – No more stuck sends
+
+- Every change the app sends gives up after 20 seconds and is tried again, so a stuck request no longer holds back codes, replies or new messages for minutes.
+
+## 10 Nov 2026 – Screenshots on Cloudinary
+
+- New screenshots (paths with `/cloud-`) open through the website's `/api/screenshots/view` link; older ones still open from Supabase.
+- Images the admin sends go to Cloudinary through `/api/screenshots/upload`. Until the live website has that route, they go to Supabase as before.
+- Deleting an admin image removes it from Cloudinary too.
+
+## 7 Nov 2026 – Smooth with more data
+
+- The copy saved on the phone is built and written in the background, so scrolling and typing do not stop.
+- The minute refresh skips rows that have not changed, so screens only rebuild when something really changed.
+- Tabs that are not on screen, and screens behind an open chat, stop rebuilding until they are shown again.
+- Avatars, inbox cards and customer rows only rebuild for their own customer.
+- Bot chat counts are worked out directly and its list builds only the rows on screen.
+- Pictures that fail to load ask again after refreshing the sign in, then fall back to downloading the file. A blank picture can be tapped to retry, and the viewer has Try again with the reason shown.
+- Screenshots cut off before their end (browsers still show them) now open in the app too: the missing JPEG end marker is added after download.
+
 ## 6 Nov 2026 – Saved bank accounts and less lag
 
 - The Bank account page keeps saved accounts; tapping one puts it in use, and the account in use can be saved or removed.

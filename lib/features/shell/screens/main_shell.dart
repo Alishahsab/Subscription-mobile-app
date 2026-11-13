@@ -147,7 +147,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           child: Scaffold(
             body: Stack(
               children: [
-                widget.shell,
+                TickerMode(enabled: !covered, child: widget.shell),
                 if (!loaded) const Positioned.fill(child: _LoadingCover()),
                 if (loaded && !keyboardOpen)
                   Positioned(

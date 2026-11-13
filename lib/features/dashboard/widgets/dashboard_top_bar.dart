@@ -25,7 +25,7 @@ class DashboardTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(dataProvider).config;
+    final config = ref.watch(dataProvider.select((data) => data.config));
     final status = _statuses[config?.effectiveStatus(watchNow(ref))] ?? _statuses['active']!;
 
     return Padding(

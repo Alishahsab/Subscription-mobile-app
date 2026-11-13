@@ -10,6 +10,8 @@ import 'db_table.dart';
 import 'outbox_op.dart';
 import 'recent_writes.dart';
 
+const _requestWait = Duration(seconds: 20);
+
 bool canRetry(Object error) {
   if (error is! PostgrestException) return true;
   final code = error.code;
@@ -78,7 +80,7 @@ class Outbox extends ChangeNotifier {
     while (_ops.isNotEmpty) {
       final op = _ops.first;
       try {
-        await _run(op);
+        await _run(op).timeout(_requestWait);
         _ops.removeAt(0);
         _save();
         _confirm(op);

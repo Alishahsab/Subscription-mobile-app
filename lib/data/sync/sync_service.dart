@@ -17,6 +17,7 @@ import 'outbox.dart';
 import 'outbox_op.dart';
 import 'recent_writes.dart';
 import 'row_reader.dart';
+import 'seen_versions.dart';
 import 'server_clock.dart';
 
 const _refreshEvery = Duration(minutes: 1);
@@ -42,6 +43,7 @@ class SyncService with WidgetsBindingObserver {
 
   final Ref _ref;
   final _writes = RecentWrites();
+  final _seen = SeenVersions();
   late final Outbox _outbox;
   final _copy = LocalCopy();
 
@@ -112,6 +114,7 @@ class SyncService with WidgetsBindingObserver {
     _outbox.stop();
     _loadedChats.clear();
     _olderChats.clear();
+    _seen.clear();
     _changesSince = null;
     _lastFullLoadAt = 0;
 
@@ -272,6 +275,9 @@ class SyncService with WidgetsBindingObserver {
       var next = data;
       for (var index = 0; index < DbTable.all.length; index++) {
         final table = DbTable.all[index];
+        for (final row in results[index]) {
+          _seen.isNew(table.name, table.key, row);
+        }
         next = table == DbTable.messages ? next.withRecentMessages(results[index], since) : next.withAllRows(table, results[index]);
       }
       if (config != null) next = next.copyWith(config: StoreConfig.fromRow(config));
@@ -295,7 +301,13 @@ class SyncService with WidgetsBindingObserver {
         if (_userId == null) return _ChangesResult.failed;
         if (version != _localVersion) continue;
 
-        if (config == null && results.every((rows) => rows.isEmpty)) {
+        final changed = [
+          for (var index = 0; index < DbTable.all.length; index++)
+            results[index].where((row) => _seen.isNew(DbTable.all[index].name, DbTable.all[index].key, row)).toList(),
+        ];
+        final changedConfig = config != null && _seen.isNew('store_config', 'id', config) ? config : null;
+
+        if (changedConfig == null && changed.every((rows) => rows.isEmpty)) {
           _changesSince = startedAt;
           return _ChangesResult.done;
         }
@@ -304,13 +316,13 @@ class SyncService with WidgetsBindingObserver {
           var next = data;
           for (var index = 0; index < DbTable.all.length; index++) {
             final table = DbTable.all[index];
-            for (final row in results[index]) {
+            for (final row in changed[index]) {
               if (_hiddenOlderMessage(table, row, next)) continue;
               final local = next;
               next = next.withRow(table, _writes.merge(table, row, () => local.rowOf(table, row[table.key].toString())));
             }
           }
-          if (config != null) next = next.copyWith(config: StoreConfig.fromRow(config));
+          if (changedConfig != null) next = next.copyWith(config: StoreConfig.fromRow(changedConfig));
           return next;
         });
         _changesSince = startedAt;
@@ -346,6 +358,7 @@ class SyncService with WidgetsBindingObserver {
       table: 'store_config',
       callback: (payload) {
         if (payload.eventType == PostgresChangeEvent.delete) return;
+        _seen.isNew('store_config', 'id', payload.newRecord);
         _change((data) => data.copyWith(config: StoreConfig.fromRow(payload.newRecord)));
       },
     );
@@ -381,7 +394,7 @@ class SyncService with WidgetsBindingObserver {
       _change((data) => data.withoutRow(table, id));
     } else {
       final row = payload.newRecord;
-      if (_hiddenOlderMessage(table, row, _data)) return;
+      if (!_seen.isNew(table.name, table.key, row) || _hiddenOlderMessage(table, row, _data)) return;
       _change((data) => data.withRow(table, _writes.merge(table, row, () => data.rowOf(table, row[table.key].toString()))));
     }
     _saveSoon();
@@ -395,6 +408,6 @@ class SyncService with WidgetsBindingObserver {
   void _saveNow() {
     _saveTimer?.cancel();
     if (_userId == null || !_data.loaded) return;
-    _copy.save(copyToJson(_data, _changesSince, _lastFullLoadAt, _clock.now));
+    _copy.save(_data, _changesSince, _lastFullLoadAt, _clock.now);
   }
 }
