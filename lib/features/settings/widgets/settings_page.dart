@@ -24,39 +24,13 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(settingsDraftProvider);
     final draft = state.draft;
-    final tones = context.tones;
-    final colors = Theme.of(context).colorScheme;
-    final sub = subtitle;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  IconButton.filled(
-                    onPressed: () => Navigator.pop(context),
-                    style: IconButton.styleFrom(backgroundColor: colors.surface, foregroundColor: tones.title),
-                    icon: const Icon(Icons.chevron_left_rounded),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 40),
-                      child: Column(
-                        children: [
-                          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: tones.title, fontSize: 17, fontWeight: FontWeight.w700)),
-                          if (sub != null)
-                            Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11.5, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SettingsPageHeader(title: title, subtitle: subtitle),
             Expanded(
               child: draft == null
                   ? const SizedBox()
@@ -71,6 +45,44 @@ class SettingsPage extends ConsumerWidget {
             const Padding(padding: EdgeInsets.fromLTRB(16, 8, 16, 12), child: SaveBar()),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class SettingsPageHeader extends StatelessWidget {
+  const SettingsPageHeader({super.key, required this.title, this.subtitle});
+
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final tones = context.tones;
+    final colors = Theme.of(context).colorScheme;
+    final sub = subtitle;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Row(
+        children: [
+          IconButton.filled(
+            onPressed: () => Navigator.pop(context),
+            style: IconButton.styleFrom(backgroundColor: colors.surface, foregroundColor: tones.title),
+            icon: const Icon(Icons.chevron_left_rounded),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 40),
+              child: Column(
+                children: [
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: tones.title, fontSize: 17, fontWeight: FontWeight.w700)),
+                  if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

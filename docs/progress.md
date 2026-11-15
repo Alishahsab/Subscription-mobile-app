@@ -2,6 +2,14 @@
 
 What was done each day, newest first.
 
+## 16 Nov 2026 – New customers show their name at once
+
+- When a chat or message arrives for a customer the app does not know yet, the app loads that customer straight away instead of showing "New · Customer" until the next refresh.
+- Payment and support notifications are now shown by Android itself, so they arrive at once even when the phone keeps the app asleep. They no longer carry Approve/Reject buttons; tapping one opens that order or request.
+- The bottom tab bar uses the app's dark navy with a blue pill and white icon for the open tab, instead of grey and orange.
+- Settings has "Logged-in phones": every phone that gets admin notifications, with its name, when it was last active and "This phone" (needs `041_admin_phones.sql`).
+- Changing the admin password on the website signs out every phone. Each phone checks its sign-in when the app comes back to the screen and goes to the login page if it was ended; its notifications stop straight away.
+
 ## 13 Nov 2026 – No more stuck sends
 
 - Every change the app sends gives up after 20 seconds and is tried again, so a stuck request no longer holds back codes, replies or new messages for minutes.

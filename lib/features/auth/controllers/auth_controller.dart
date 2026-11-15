@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,11 +14,13 @@ final authControllerProvider = ChangeNotifierProvider((ref) {
   return AuthController(ref.read(authRepositoryProvider), ref.read(syncProvider));
 });
 
-class AuthController extends ChangeNotifier {
+class AuthController extends ChangeNotifier with WidgetsBindingObserver {
   AuthController(this._repository, this._sync) : signedIn = _repository.session != null {
+    WidgetsBinding.instance.addObserver(this);
     _subscription = _repository.changes.listen((state) {
       if (state.event != AuthChangeEvent.signedOut) return;
       signedIn = false;
+      _sync.stop(removeCopy: true);
       notifyListeners();
     });
   }
@@ -40,7 +42,13 @@ class AuthController extends ChangeNotifier {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && signedIn) _repository.checkSession();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _subscription.cancel();
     super.dispose();
   }

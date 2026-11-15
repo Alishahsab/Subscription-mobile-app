@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -81,6 +82,15 @@ class PushService {
     }
   }
 
+  Future<String?> currentToken() async {
+    if (!_ready) return null;
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> unregisterDevice() async {
     if (!_ready) return;
     try {
@@ -99,8 +109,18 @@ class PushService {
       'token': token,
       'user_id': userId,
       'platform': 'android',
+      'device_name': await _deviceName(),
       'updated_at': DateTime.now().millisecondsSinceEpoch,
     });
+  }
+
+  Future<String?> _deviceName() async {
+    try {
+      final info = await DeviceInfoPlugin().androidInfo;
+      return '${info.manufacturer.toUpperCase()} ${info.model}';
+    } catch (_) {
+      return null;
+    }
   }
 
   void _respond(NotificationResponse response) {
@@ -130,7 +150,7 @@ class PushService {
 
 @pragma('vm:entry-point')
 Future<void> showAlertInBackground(RemoteMessage message) async {
-  if (alertKey(message.data) == null) return;
+  if (message.notification != null || alertKey(message.data) == null) return;
   final local = FlutterLocalNotificationsPlugin();
   await local.initialize(
     settings: const InitializationSettings(android: AndroidInitializationSettings('@drawable/ic_notification')),

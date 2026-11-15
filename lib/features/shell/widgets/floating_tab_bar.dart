@@ -5,7 +5,8 @@ import 'home_tab.dart';
 
 const _slide = Duration(milliseconds: 300);
 const _curve = Curves.easeOutCubic;
-const _barColor = Color(0xB83F3A38);
+const _barColor = Color(0xE6161A22);
+const _idleColor = Color(0xA6FFFFFF);
 
 class FloatingTabBar extends StatelessWidget {
   const FloatingTabBar({super.key, required this.index, required this.onSelect, this.inboxCount = 0});
@@ -40,9 +41,8 @@ class FloatingTabBar extends StatelessWidget {
                     offset: Offset(index.toDouble(), 0),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: AppColors.darkAccent,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
                     ),
                   ),
@@ -79,7 +79,7 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.orange : Colors.white;
+    final color = active ? Colors.white : _idleColor;
 
     return Semantics(
       button: true,

@@ -27,4 +27,13 @@ class AuthRepository {
   }
 
   Future<void> signOut() => _client.auth.signOut();
+
+  Future<void> checkSession() async {
+    if (_client.auth.currentSession == null) return;
+    try {
+      await _client.auth.refreshSession();
+    } catch (_) {
+      return;
+    }
+  }
 }

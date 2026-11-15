@@ -19,6 +19,7 @@ import '../sections/support_section.dart';
 import '../sections/timers_section.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/settings_page.dart';
+import 'phones_screen.dart';
 
 const _tabBarSpace = 104.0;
 
@@ -104,6 +105,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onTap: () => openSettingsPage(context, title: section.label, builder: section.builder),
                         ),
                       if (words.isEmpty) ...[
+                        _SettingsCard(
+                          icon: Icons.phone_android_rounded,
+                          title: 'Logged-in phones',
+                          sub: 'Phones signed in to the app',
+                          end: Icon(Icons.chevron_right_rounded, size: 17, color: tones.faint),
+                          onTap: () => openPhonesScreen(context),
+                        ),
                         _SettingsCard(
                           icon: Icons.dark_mode_outlined,
                           title: 'Dark mode',

@@ -9,6 +9,7 @@ import '../../app/theme/theme_controller.dart';
 import '../models/db_row.dart';
 import '../models/store_config.dart';
 import 'app_data.dart';
+import 'app_lookups.dart';
 import 'chat_window.dart';
 import 'data_notifier.dart';
 import 'db_table.dart';
@@ -61,6 +62,7 @@ class SyncService with WidgetsBindingObserver {
   bool _changesSupported = true;
   final _loadedChats = <String>{};
   final _olderChats = <String, bool>{};
+  final _customersLoading = <String>{};
 
   Outbox get outbox => _outbox;
 
@@ -396,8 +398,21 @@ class SyncService with WidgetsBindingObserver {
       final row = payload.newRecord;
       if (!_seen.isNew(table.name, table.key, row) || _hiddenOlderMessage(table, row, _data)) return;
       _change((data) => data.withRow(table, _writes.merge(table, row, () => data.rowOf(table, row[table.key].toString()))));
+      _loadMissingCustomer(row['customer_id']);
     }
     _saveSoon();
+  }
+
+  Future<void> _loadMissingCustomer(Object? customerId) async {
+    if (customerId is! String || _data.customer(customerId) != null || !_customersLoading.add(customerId)) return;
+    try {
+      final row = await _reader.readCustomer(customerId);
+      if (row != null && _userId != null) _change((data) => data.withRow(DbTable.customers, row));
+    } catch (_) {
+      return;
+    } finally {
+      _customersLoading.remove(customerId);
+    }
   }
 
   void _saveSoon() {

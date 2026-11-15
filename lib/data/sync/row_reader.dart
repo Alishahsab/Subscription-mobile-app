@@ -31,6 +31,10 @@ class RowReader {
     return unique.values.toList();
   }
 
+  Future<DbRow?> readCustomer(String id) {
+    return _client.from(DbTable.customers.name).select().eq(DbTable.customers.key, id).maybeSingle();
+  }
+
   Future<List<DbRow>> readChat(String customerId, {required int before}) {
     return _client.from(DbTable.messages.name).select().eq('customer_id', customerId).lt('created_at', before).order('created_at');
   }
