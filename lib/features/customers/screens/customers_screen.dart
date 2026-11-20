@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/theme/app_tones.dart';
 import '../../../core/widgets/category_chips.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/grouped_list_card.dart';
@@ -15,6 +16,7 @@ import '../../inbox/widgets/customer_avatar.dart';
 import '../widgets/customer_row.dart';
 
 const _pageSize = 30;
+const _sortLabels = {'active': 'Last active', 'id': 'Customer ID', 'whatsapp': 'WhatsApp number'};
 
 bool matchesCustomer(Customer customer, String words) {
   return customer.email.toLowerCase().contains(words) ||
@@ -31,6 +33,7 @@ class CustomersScreen extends ConsumerStatefulWidget {
 
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   String _filter = 'all';
+  String _sort = 'active';
   String _query = '';
   int _shownCount = _pageSize;
 
@@ -42,8 +45,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   }
 
   List<Customer> _sorted(AppData data) {
-    final activity = {for (final customer in data.customers) customer.id: lastActivityAt(data, customer.id)};
-    return [...data.customers]..sort((a, b) => activity[b.id]!.compareTo(activity[a.id]!));
+    final customers = [...data.customers];
+    switch (_sort) {
+      case 'id':
+        return customers..sort((a, b) => (b.number ?? 1 << 31).compareTo(a.number ?? 1 << 31));
+      case 'whatsapp':
+        return customers..sort((a, b) => (a.whatsapp ?? '~').compareTo(b.whatsapp ?? '~'));
+      default:
+        final activity = {for (final customer in customers) customer.id: lastActivityAt(data, customer.id)};
+        return customers..sort((a, b) => activity[b.id]!.compareTo(activity[a.id]!));
+    }
   }
 
   @override
@@ -77,12 +88,60 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
               }),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-              child: Text(
-                '${customers.length} customers · each one sees only their own chat',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${customers.length} customers',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    initialValue: _sort,
+                    onSelected: (sort) => setState(() {
+                      _sort = sort;
+                      _shownCount = _pageSize;
+                    }),
+                    offset: const Offset(0, 34),
+                    constraints: const BoxConstraints(minWidth: 150, maxWidth: 170),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    itemBuilder: (context) => [
+                      for (final entry in _sortLabels.entries)
+                        PopupMenuItem(
+                          value: entry.key,
+                          height: 38,
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(fontSize: 12.5, fontWeight: entry.key == _sort ? FontWeight.w700 : FontWeight.w500),
+                          ),
+                        ),
+                    ],
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: context.tones.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.swap_vert_rounded, size: 14, color: colors.onSurface),
+                          const SizedBox(width: 4),
+                          Text(
+                            _sortLabels[_sort]!,
+                            style: TextStyle(color: colors.onSurface, fontSize: 11.5, fontWeight: FontWeight.w600),
+                          ),
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: colors.onSurfaceVariant),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             CategoryChips(

@@ -14,7 +14,6 @@ import '../../search/screens/search_screen.dart';
 import '../widgets/completed_chart.dart';
 import '../widgets/customer_list_card.dart';
 import '../widgets/dashboard_top_bar.dart';
-import '../widgets/pending_hero.dart';
 import '../widgets/stat_card.dart';
 
 const _tabBarSpace = 96.0;
@@ -67,8 +66,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  PendingHero(pending: pending, onTap: () => openInbox('pending')),
-                                  const SizedBox(height: 12),
                                   Row(
                                     children: [
                                       Expanded(
@@ -98,7 +95,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  Expanded(child: CompletedChart(orders: data.orders, now: now)),
+                                  CompletedChart(orders: data.orders, now: now),
                                   const SizedBox(height: 12),
                                   CustomerListCard(count: data.customers.length, onTap: () => context.push(AppRoutes.customers)),
                                 ],

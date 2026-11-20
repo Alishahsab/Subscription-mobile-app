@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_tones.dart';
-import '../../../core/utils/text_rules.dart';
-import '../../../data/models/db_row.dart';
 import '../../../data/models/store_config.dart';
 import '../controllers/settings_draft.dart';
 import '../widgets/message_pages.dart';
@@ -23,39 +21,6 @@ final _reasons = listField(
   (draft, value) => groupOf(draft, 'blocking')['reasons'] = value,
   hint: 'The reasons you can pick when you block someone. One per line.',
 );
-
-void _openEmail(BuildContext context) {
-  openSettingsPage(
-    context,
-    title: 'Email button',
-    subtitle: _subtitle,
-    builder: (context, draft, update) {
-      final blocking = groupOf(draft, 'blocking');
-      return SettingsGroup(
-        children: [
-          InputBlock(
-            label: 'Button text',
-            child: SettingsInput(
-              value: blocking['channelLabel'] as String,
-              maxLength: 40,
-              onChanged: (value) => update((next) => groupOf(next, 'blocking')['channelLabel'] = value),
-            ),
-          ),
-          InputBlock(
-            label: 'Support email',
-            hint: 'Leave empty to hide the button',
-            child: SettingsInput(
-              value: blocking['channelUrl'] as String,
-              placeholder: 'support@example.com',
-              keyboardType: TextInputType.emailAddress,
-              onChanged: (value) => update((next) => groupOf(next, 'blocking')['channelUrl'] = cleanEmail(value)),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
 
 void _openQuickReplies(BuildContext context) {
   openSettingsPage(
@@ -94,51 +59,17 @@ class InboxSection extends StatelessWidget {
   final StoreConfig draft;
   final UpdateDraft update;
 
-  void _moveTab(int from, int to) {
-    update((next) {
-      final tabs = next.settings['inboxTabs'] as List;
-      tabs.insert(to, tabs.removeAt(from));
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final tones = context.tones;
-    final tabs = (draft.settings['inboxTabs'] as List).cast<DbRow>();
     final blocking = groupOf(draft, 'blocking');
     final replies = (draft.settings['quickReplies'] as List).cast<String>();
     final reasons = (blocking['reasons'] as List).cast<String>().where((reason) => reason.trim().isNotEmpty).toList();
     final firstReplies = replies.where((reply) => reply.isNotEmpty).take(2).join(' · ');
-    final email = blocking['channelUrl'] as String;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SettingsGroup(
-          title: 'Inbox tabs · names and order',
-          children: [
-            for (var index = 0; index < tabs.length; index++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    NumberBadge(number: index + 1),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: SettingsInput(
-                        key: ValueKey(tabs[index]['key']),
-                        value: tabs[index]['label'] as String,
-                        maxLength: 24,
-                        onChanged: (value) => update((next) => (next.settings['inboxTabs'] as List)[index]['label'] = value),
-                      ),
-                    ),
-                    IconButton(onPressed: index == 0 ? null : () => _moveTab(index, index - 1), icon: const Icon(Icons.keyboard_arrow_up_rounded)),
-                    IconButton(onPressed: index == tabs.length - 1 ? null : () => _moveTab(index, index + 1), icon: const Icon(Icons.keyboard_arrow_down_rounded)),
-                  ],
-                ),
-              ),
-          ],
-        ),
         SettingsGroup(
           title: 'Quick replies',
           children: [
@@ -154,11 +85,6 @@ class InboxSection extends StatelessWidget {
           title: 'Blocking',
           children: [
             SettingsRow(title: 'Block & unblock messages', sub: 'What the customer sees', count: 2, onTap: () => openMessageList(context, 'Block & unblock messages', _blockFields, subtitle: _subtitle)),
-            SettingsRow(
-              title: 'Email button',
-              sub: '${blocking['channelLabel']} · ${email.isEmpty ? 'hidden' : email}',
-              onTap: () => _openEmail(context),
-            ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

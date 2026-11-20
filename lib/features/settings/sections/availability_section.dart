@@ -17,7 +17,7 @@ const _offlineDot = Color(0xFFA1A1AA);
 
 const _statuses = [
   ('active', 'Active', 'Orders and support work normally', _activeDot),
-  ('away', 'Away', 'Orders taken, no new support', _awayDot),
+  ('away', 'Away', 'Orders and support open, replies may be slower', _awayDot),
   ('away_closed', 'Away · closed', 'No new orders or support', _closedDot),
   ('offline', 'Offline', 'No new orders or support', _offlineDot),
 ];

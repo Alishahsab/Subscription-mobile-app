@@ -46,6 +46,9 @@ class AppTones {
   Color get chartTrack => dark ? const Color(0xFF1C2440) : const Color(0xFFEEF1F7);
   Color get chartBar => dark ? const Color(0xFF34426E) : const Color(0xFFC7D2EC);
   Color get chartPicked => dark ? const Color(0xFF5B74B3) : AppColors.navy;
+  List<Color> get chartPlans => dark
+      ? const [Color(0xFF3B4C80), Color(0xFF5B74B3), Color(0xFF93A8E6), Color(0xFFE0B25A), Color(0xFF6FC3A0)]
+      : const [Color(0xFF1E2F6B), Color(0xFF4A64B0), Color(0xFF93A8DE), Color(0xFFD9A441), Color(0xFF4FA584)];
 }
 
 extension AppTonesOfContext on BuildContext {

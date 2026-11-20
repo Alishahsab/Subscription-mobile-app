@@ -4,12 +4,12 @@ import 'package:premium_store_admin/features/dashboard/widgets/completed_chart.d
 
 final now = DateTime(2026, 11, 4, 15).millisecondsSinceEpoch;
 
-Order completed(int daysAgo) {
+Order completed(int daysAgo, [String plan = '1 Month']) {
   return Order.fromRow({
     'id': 'PS-$daysAgo',
     'customer_id': 'c1',
     'plan_id': 'p',
-    'plan_name': '1 Month',
+    'plan_name': plan,
     'amount': 299,
     'method_name': 'JazzCash',
     'status': 'completed',
@@ -40,5 +40,12 @@ void main() {
   test('the arrows stop at the first completed order', () {
     expect(oldestWeekBack(orders, now), 2);
     expect(oldestWeekBack(const [], now), 0);
+  });
+
+  test('each day counts every plan on its own, sorted by months', () {
+    final days = completedByDay([completed(0), completed(0, '3 Months'), completed(0, '12 Months'), completed(0, '3 Months')], now);
+    expect(days.last.count, 4);
+    expect(days.last.countFor('3 Months'), 2);
+    expect(plansIn(days).map(shortPlan), ['1M', '3M', '12M']);
   });
 }
