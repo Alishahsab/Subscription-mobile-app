@@ -30,6 +30,8 @@ class MessageField {
   final bool lines;
   final String Function(StoreConfig draft) get;
   final void Function(StoreConfig draft, String value) set;
+
+  bool get popup => '$label ${hint ?? ''}'.toLowerCase().contains('pop-up');
 }
 
 DbRow groupOf(StoreConfig draft, String name) => draft.settings[name] as DbRow;
@@ -95,6 +97,7 @@ void openMessageList(BuildContext context, String title, List<MessageField> fiel
               sub: _preview(field, draft),
               twoLines: true,
               dot: field.dot,
+              end: field.popup ? const PopupTag() : null,
               onTap: () => openMessageEditor(context, field, subtitle: title),
             ),
         ],

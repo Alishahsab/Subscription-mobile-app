@@ -128,7 +128,7 @@ void main() {
       testWidgets('dashboard draws on ${size.width.toInt()} wide, dark $dark', (tester) async {
         await _pump(tester, const DashboardScreen(), size: size, dark: dark);
 
-        expect(find.text('Needs your review'), findsOneWidget);
+        expect(find.text('Pending orders'), findsOneWidget);
         expect(find.text('Completed orders'), findsOneWidget);
         expect(find.text('Customer list'), findsOneWidget);
         expect(find.text('6 customers · tap to see all'), findsOneWidget);
@@ -162,18 +162,15 @@ void main() {
 
     expect(find.text('Approve'), findsNWidgets(2));
     expect(find.text('Rejected: Screenshot is unclear'), findsOneWidget);
-    expect(find.text('Ghulam Abbas'), findsNWidgets(2));
     expect(find.text('3 Months · Rs 769 · Easypaisa'), findsNWidgets(2));
+    expect(find.text('Sender: Ghulam Abbas'), findsOneWidget);
   });
 
-  testWidgets('card buttons are only as wide as their text', (tester) async {
+  testWidgets('card buttons share the card width equally', (tester) async {
     await _pump(tester, const InboxScreen(), tab: 'pending');
 
-    for (final label in ['Approve', 'Reject', 'Cancel']) {
-      final text = tester.getSize(find.text(label).first).width;
-      final button = tester.getSize(find.widgetWithText(CardButton, label).first).width;
-      expect(button, text + 28);
-    }
+    final widths = [for (final label in ['Approve', 'Reject', 'Cancel']) tester.getSize(find.widgetWithText(CardButton, label).first).width];
+    expect(widths.toSet(), hasLength(1));
   });
 
   testWidgets('approve finds the code and refuses one already sent', (tester) async {
@@ -190,6 +187,10 @@ void main() {
     await tester.pump();
     expect(find.textContaining('was already sent to customer2@gmail.com'), findsOneWidget);
 
+    await tester.enterText(field, 'Your premium code for 1 month is: XYZ789');
+    await tester.pump();
+    expect(find.textContaining('This order is for 3 Months'), findsOneWidget);
+
     await tester.enterText(field, 'no code here');
     await tester.pump();
     expect(find.text('No code found, please type the code'), findsOneWidget);
@@ -203,8 +204,8 @@ void main() {
     await tester.tap(find.text('Write a reason'));
     await tester.pump();
 
-    final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Reject'));
-    expect(button.onPressed, isNull);
+    final button = tester.widget<Opacity>(find.ancestor(of: find.text('Reject').last, matching: find.byType(Opacity)).first);
+    expect(button.opacity, lessThan(1));
   });
 
   testWidgets('search narrows the list', (tester) async {

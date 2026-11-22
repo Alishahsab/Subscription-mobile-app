@@ -36,7 +36,7 @@ final _sections = [
   _Section('Availability', 'Status, working hours, closed message', Icons.schedule_rounded, (context, draft, update) => AvailabilitySection(draft: draft, update: update)),
   _Section('Plans & payments', 'Plans, prices, payment methods', Icons.credit_card_rounded, (context, draft, update) => PaymentsSection(draft: draft, update: update)),
   _Section('Support', 'Welcome, support requests, FAQs', Icons.support_outlined, (context, draft, update) => SupportSection(draft: draft, update: update)),
-  _Section('Inbox & blocking', 'Tabs, quick replies, block reasons', Icons.inbox_outlined, (context, draft, update) => InboxSection(draft: draft, update: update)),
+  _Section('Inbox & blocking', 'Quick replies, block messages and reasons', Icons.inbox_outlined, (context, draft, update) => InboxSection(draft: draft, update: update)),
   _Section('Timers & limits', 'Order time, cooldowns, cancels', Icons.timer_outlined, (context, draft, update) => TimersSection(draft: draft, update: update)),
   _Section('Appearance', 'Chatbot colour', Icons.palette_outlined, (context, draft, update) => AppearanceSection(draft: draft, update: update)),
 ];

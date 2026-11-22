@@ -27,7 +27,7 @@ const _afterScreenshot = 'Shown after the payment screenshot is sent.';
 const _onBuy = 'Pop-up when the customer taps Buy.';
 const _afterRequest = 'Shown after a support request is sent.';
 const _onIssues = 'Pop-up when the customer taps Other issues.';
-const _lockHint = 'Shown above the menu and in the pop-up when a closed button is tapped.';
+const _closedHint = 'Pop-up title when a closed button is tapped while you are Away · closed or Offline.';
 
 final _orderFields = [
   groupField('Active · after the screenshot', 'statusMessages', 'active', hint: _afterScreenshot, dot: _activeDot, variables: _orderVariables),
@@ -43,15 +43,7 @@ final _supportFields = [
   groupField('Offline · pop-up on Other issues', 'supportClosedMessages', 'offline', hint: _onIssues, dot: _offlineDot),
 ];
 
-final _menuLockFields = [
-  groupField('Waiting for approval · title', 'menuLock', 'pendingTitle', hint: _lockHint),
-  groupField('Waiting for approval · message', 'menuLock', 'pending', hint: _lockHint),
-  groupField('Payment rejected · title', 'menuLock', 'rejectedTitle', hint: _lockHint),
-  groupField('Payment rejected · message', 'menuLock', 'rejected', hint: _lockHint),
-  groupField('Request open · title', 'menuLock', 'issueTitle', hint: _lockHint),
-  groupField('Request open · message', 'menuLock', 'issue', hint: _lockHint),
-  groupField('Away · closed or Offline · title', 'menuLock', 'closedTitle', hint: _lockHint),
-];
+final _closedTitle = groupField('Closed menu · title', 'menuLock', 'closedTitle', hint: _closedHint);
 
 class AvailabilitySection extends ConsumerWidget {
   const AvailabilitySection({super.key, required this.draft, required this.update});
@@ -126,7 +118,7 @@ class AvailabilitySection extends ConsumerWidget {
           children: [
             SettingsRow(title: 'Order messages', sub: 'What buyers see for each status', count: 4, onTap: () => openMessageList(context, 'Order messages', _orderFields, subtitle: _subtitle)),
             SettingsRow(title: 'Support messages', sub: 'After a request, and when closed', count: 4, onTap: () => openMessageList(context, 'Support messages', _supportFields, subtitle: _subtitle)),
-            SettingsRow(title: 'Closed menu', sub: 'While a payment or a request waits for you', count: 7, onTap: () => openMessageList(context, 'Closed menu', _menuLockFields, subtitle: _subtitle)),
+            SettingsRow(title: 'Closed menu title', sub: 'When you are Away · closed or Offline', end: const PopupTag(), onTap: () => openMessageEditor(context, _closedTitle, subtitle: _subtitle)),
           ],
         ),
       ],

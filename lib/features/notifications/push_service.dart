@@ -91,6 +91,16 @@ class PushService {
     }
   }
 
+  Future<void> markActive() async {
+    final token = await currentToken();
+    if (token == null) return;
+    try {
+      await _saveToken(token);
+    } catch (error) {
+      debugPrint('Could not update this phone: $error');
+    }
+  }
+
   Future<void> unregisterDevice() async {
     if (!_ready) return;
     try {

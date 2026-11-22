@@ -16,7 +16,7 @@ import '../../inbox/widgets/customer_avatar.dart';
 import '../widgets/customer_row.dart';
 
 const _pageSize = 30;
-const _sortLabels = {'active': 'Last active', 'id': 'Customer ID', 'whatsapp': 'WhatsApp number'};
+const _sortLabels = {'newest': 'New → Old', 'oldest': 'Old → New', 'active': 'Last active'};
 
 bool matchesCustomer(Customer customer, String words) {
   return customer.email.toLowerCase().contains(words) ||
@@ -33,7 +33,7 @@ class CustomersScreen extends ConsumerStatefulWidget {
 
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   String _filter = 'all';
-  String _sort = 'active';
+  String _sort = 'newest';
   String _query = '';
   int _shownCount = _pageSize;
 
@@ -46,14 +46,16 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
   List<Customer> _sorted(AppData data) {
     final customers = [...data.customers];
+    int joined(Customer customer) => customer.number ?? 1 << 31;
+
     switch (_sort) {
-      case 'id':
-        return customers..sort((a, b) => (b.number ?? 1 << 31).compareTo(a.number ?? 1 << 31));
-      case 'whatsapp':
-        return customers..sort((a, b) => (a.whatsapp ?? '~').compareTo(b.whatsapp ?? '~'));
-      default:
+      case 'oldest':
+        return customers..sort((a, b) => joined(a).compareTo(joined(b)));
+      case 'active':
         final activity = {for (final customer in customers) customer.id: lastActivityAt(data, customer.id)};
         return customers..sort((a, b) => activity[b.id]!.compareTo(activity[a.id]!));
+      default:
+        return customers..sort((a, b) => joined(b).compareTo(joined(a)));
     }
   }
 

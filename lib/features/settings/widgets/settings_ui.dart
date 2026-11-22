@@ -325,3 +325,25 @@ class NumberBadge extends StatelessWidget {
     );
   }
 }
+
+class PopupTag extends StatelessWidget {
+  const PopupTag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final tones = context.tones;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(color: tones.blueFill, borderRadius: BorderRadius.circular(999)),
+          child: Text('Pop-up', style: TextStyle(color: tones.blueText, fontSize: 10.5, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(width: 6),
+        Icon(Icons.chevron_right_rounded, size: 16, color: tones.faint),
+      ],
+    );
+  }
+}

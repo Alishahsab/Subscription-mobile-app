@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_tones.dart';
+import '../../../core/widgets/app_sheet.dart';
 
 const _other = 'other';
 
@@ -12,26 +13,26 @@ Future<void> showReasonDialog(
   required String confirmLabel,
   required ValueChanged<String> onConfirm,
 }) {
-  return showDialog<void>(
-    context: context,
-    builder: (context) => _ReasonDialog(title: title, description: description, reasons: reasons, confirmLabel: confirmLabel, onConfirm: onConfirm),
+  return showAppSheet<void>(
+    context,
+    title: title,
+    subtitle: description,
+    builder: (context) => _ReasonPicker(reasons: reasons, confirmLabel: confirmLabel, onConfirm: onConfirm),
   );
 }
 
-class _ReasonDialog extends StatefulWidget {
-  const _ReasonDialog({required this.title, required this.description, required this.reasons, required this.confirmLabel, required this.onConfirm});
+class _ReasonPicker extends StatefulWidget {
+  const _ReasonPicker({required this.reasons, required this.confirmLabel, required this.onConfirm});
 
-  final String title;
-  final String description;
   final List<String> reasons;
   final String confirmLabel;
   final ValueChanged<String> onConfirm;
 
   @override
-  State<_ReasonDialog> createState() => _ReasonDialogState();
+  State<_ReasonPicker> createState() => _ReasonPickerState();
 }
 
-class _ReasonDialogState extends State<_ReasonDialog> {
+class _ReasonPickerState extends State<_ReasonPicker> {
   late String _choice = widget.reasons.firstOrNull ?? _other;
   String _customReason = '';
 
@@ -44,44 +45,41 @@ class _ReasonDialogState extends State<_ReasonDialog> {
   Widget build(BuildContext context) {
     final reason = _choice == _other ? _customReason.trim() : _choice;
 
-    return AlertDialog(
-      title: Text(widget.title),
-      scrollable: true,
-      content: Column(
+    return SingleChildScrollView(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.description),
-          const SizedBox(height: 16),
-          for (final item in [...widget.reasons, _other])
-            _ReasonOption(
-              label: item == _other ? 'Write a reason' : item,
-              selected: _choice == item,
-              onTap: () => setState(() => _choice = item),
-            ),
-          if (_choice == _other)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final item in [...widget.reasons, _other])
+                _ReasonChip(
+                  label: item == _other ? 'Write a reason' : item,
+                  selected: _choice == item,
+                  onTap: () => setState(() => _choice = item),
+                ),
+            ],
+          ),
+          if (_choice == _other) ...[
+            const SizedBox(height: 12),
             TextField(
               autofocus: true,
               maxLength: 150,
               onChanged: (value) => setState(() => _customReason = value),
               decoration: const InputDecoration(hintText: 'Type the reason', border: OutlineInputBorder(), isDense: true),
             ),
+          ],
+          SheetButtons(label: widget.confirmLabel, fill: Colors.red.shade600, onConfirm: reason.isEmpty ? null : () => _confirm(reason)),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
-          onPressed: reason.isEmpty ? null : () => _confirm(reason),
-          child: Text(widget.confirmLabel),
-        ),
-      ],
     );
   }
 }
 
-class _ReasonOption extends StatelessWidget {
-  const _ReasonOption({required this.label, required this.selected, required this.onTap});
+class _ReasonChip extends StatelessWidget {
+  const _ReasonChip({required this.label, required this.selected, required this.onTap});
 
   final String label;
   final bool selected;
@@ -94,23 +92,15 @@ class _ReasonOption extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           color: selected ? tones.redFill : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(color: selected ? tones.redText : tones.border),
         ),
-        child: Row(
-          children: [
-            Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked, size: 16, color: selected ? tones.redText : tones.faint),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(label, style: TextStyle(color: selected ? tones.redText : colors.onSurface, fontSize: 13.5, fontWeight: FontWeight.w500)),
-            ),
-          ],
-        ),
+        child: Text(label, style: TextStyle(color: selected ? tones.redText : colors.onSurface, fontSize: 13.5, fontWeight: FontWeight.w500)),
       ),
     );
   }

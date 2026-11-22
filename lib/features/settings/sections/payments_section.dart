@@ -48,6 +48,15 @@ final _buyingFields = [
   botField('Order created', 'orderCreated', extra: '{order_id} {plan}'),
 ];
 
+const _paymentLockHint = 'Shown above the menu and in the pop-up while the payment waits for you.';
+
+final _paymentLockFields = [
+  groupField('Waiting for approval · title', 'menuLock', 'pendingTitle', hint: _paymentLockHint),
+  groupField('Waiting for approval · message', 'menuLock', 'pending', hint: _paymentLockHint),
+  groupField('Payment rejected · title', 'menuLock', 'rejectedTitle', hint: _paymentLockHint),
+  groupField('Payment rejected · message', 'menuLock', 'rejected', hint: _paymentLockHint),
+];
+
 final _cancelledFields = [
   botField('Order cancelled', 'orderCancelled'),
   botField('Order cancelled by admin', 'orderCancelledByAdmin', extra: '{order_id}'),
@@ -316,6 +325,12 @@ class PaymentsSection extends StatelessWidget {
             SettingsRow(title: 'Rejecting a payment', sub: 'Message, reasons, waiting message', count: 3, onTap: () => openMessageList(context, 'Rejecting a payment', _rejectFields, subtitle: _subtitle)),
             SettingsRow(title: 'Terms & conditions', sub: 'Shown before every order', count: terms, onTap: () => openMessageEditor(context, _terms, subtitle: _subtitle)),
             SettingsRow(title: 'Buying messages', sub: 'Choose a plan, a method, order created', count: 4, onTap: () => openMessageList(context, 'Buying messages', _buyingFields, subtitle: _subtitle)),
+            SettingsRow(
+              title: 'Closed menu · payment',
+              sub: 'While a payment waits for you',
+              count: _paymentLockFields.length,
+              onTap: () => openMessageList(context, 'Closed menu · payment', _paymentLockFields, subtitle: _subtitle),
+            ),
             SettingsRow(title: 'Cancelled & paused', sub: 'Cancelled, paused, time ran out', count: 5, onTap: () => openMessageList(context, 'Cancelled & paused', _cancelledFields, subtitle: _subtitle)),
           ],
         ),

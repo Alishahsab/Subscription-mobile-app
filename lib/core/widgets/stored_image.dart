@@ -6,6 +6,12 @@ import '../../data/repositories/image_repository.dart';
 
 typedef PictureProblem = Widget Function(String? reason, VoidCallback retry);
 
+void openImageViewer(BuildContext context, String path) {
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute<void>(fullscreenDialog: true, builder: (context) => _ImageViewer(path: path)),
+  );
+}
+
 class StoredImage extends StatelessWidget {
   const StoredImage({super.key, required this.path, this.fit = BoxFit.cover, this.alignment = Alignment.topCenter});
 
@@ -13,18 +19,12 @@ class StoredImage extends StatelessWidget {
   final BoxFit fit;
   final Alignment alignment;
 
-  void _openViewer(BuildContext context) {
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(fullscreenDialog: true, builder: (context) => _ImageViewer(path: path)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final fill = ColoredBox(color: context.tones.softFill);
 
     return GestureDetector(
-      onTap: () => _openViewer(context),
+      onTap: () => openImageViewer(context, path),
       child: _Picture(
         path: path,
         fit: fit,

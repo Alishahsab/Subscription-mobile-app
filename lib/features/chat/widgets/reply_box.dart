@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_tones.dart';
 import '../../../core/utils/picked_image.dart';
+import '../../../core/utils/plan_check.dart';
 import '../../../data/repositories/admin_actions.dart';
 import '../../../data/repositories/image_repository.dart';
 import '../../../data/sync/data_notifier.dart';
+import '../../inbox/widgets/approve_dialog.dart';
 
 const _maxLength = 1000;
 
@@ -39,6 +41,13 @@ class _ReplyBoxState extends ConsumerState<ReplyBox> {
   void _send(String text) {
     final content = text.trim();
     if (content.isEmpty) return;
+
+    final order = orderWaitingForCode(ref.read(dataProvider).orders, widget.customerId);
+    final mismatch = order == null ? null : planMismatch(content, order.planName);
+    if (mismatch != null) {
+      showPlanMismatch(context, mismatch);
+      return;
+    }
 
     ref.read(adminActionsProvider).sendMessage(widget.customerId, content);
     _controller.clear();

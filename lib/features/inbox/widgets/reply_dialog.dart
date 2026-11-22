@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_tones.dart';
 import '../../../core/utils/picked_image.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../data/repositories/admin_actions.dart';
 import '../../../data/repositories/image_repository.dart';
 
@@ -12,7 +13,12 @@ const _maxAttachments = 3;
 const _maxLength = 1000;
 
 Future<void> showReplyDialog(BuildContext context, String customerId) {
-  return showDialog<void>(context: context, builder: (context) => _ReplyDialog(customerId: customerId));
+  return showAppSheet<void>(
+    context,
+    title: 'Reply',
+    subtitle: 'Write a message, attach images, or both.',
+    builder: (context) => _ReplyDialog(customerId: customerId),
+  );
 }
 
 class _ReplyDialog extends ConsumerStatefulWidget {
@@ -70,17 +76,11 @@ class _ReplyDialogState extends ConsumerState<_ReplyDialog> {
     final tones = context.tones;
     final canSend = !_busy && (_text.trim().isNotEmpty || _attachments.isNotEmpty);
 
-    return AlertDialog(
-      alignment: Alignment.topCenter,
-      insetPadding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
-      title: const Text('Reply'),
-      scrollable: true,
-      content: Column(
+    return SingleChildScrollView(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Write a message, attach images, or both.'),
-          const SizedBox(height: 16),
           TextField(
             autofocus: true,
             minLines: 4,
@@ -111,12 +111,9 @@ class _ReplyDialogState extends ConsumerState<_ReplyDialog> {
             const SizedBox(height: 8),
             Text(_error, style: TextStyle(color: tones.redText, fontSize: 12)),
           ],
+          SheetButtons(label: _busy ? 'Sending…' : 'Send reply', onConfirm: canSend ? _send : null),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: canSend ? _send : null, child: Text(_busy ? 'Sending…' : 'Send reply')),
-      ],
     );
   }
 }

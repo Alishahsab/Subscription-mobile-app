@@ -43,7 +43,9 @@ class AuthController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && signedIn) _repository.checkSession();
+    if (state != AppLifecycleState.resumed || !signedIn) return;
+    _repository.checkSession();
+    PushService.instance.markActive();
   }
 
   @override

@@ -18,6 +18,13 @@ final _welcomeFields = [
   groupField('Main menu', 'messages', 'menuPrompt'),
 ];
 
+const _requestLockHint = 'Shown above the menu and in the pop-up while a request waits for you.';
+
+final _requestLockFields = [
+  groupField('Request open · title', 'menuLock', 'issueTitle', hint: _requestLockHint),
+  groupField('Request open · message', 'menuLock', 'issue', hint: _requestLockHint),
+];
+
 final _supportFields = [
   botField('Customer opens Support', 'supportIntro'),
   botField('Customer chooses Other issues', 'describeIssue'),
@@ -129,6 +136,12 @@ class _SupportSectionState extends State<SupportSection> {
               onChanged: (value) => update((next) => groupOf(next, 'support')['issueScreenshotRequired'] = value),
             ),
             SettingsRow(title: 'Support messages', sub: 'Open, other issues, resolved, closed', count: 5, onTap: () => openMessageList(context, 'Support messages', _supportFields, subtitle: _subtitle)),
+            SettingsRow(
+              title: 'Closed menu · support',
+              sub: 'While a request waits for you',
+              count: _requestLockFields.length,
+              onTap: () => openMessageList(context, 'Closed menu · support', _requestLockFields, subtitle: _subtitle),
+            ),
           ],
         ),
         SettingsGroup(

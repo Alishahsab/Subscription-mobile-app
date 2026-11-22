@@ -5,6 +5,7 @@ import '../../../data/models/conversation.dart';
 import '../../../data/models/customer.dart';
 import '../../../data/models/message.dart';
 import '../../../data/models/order.dart';
+import '../../../data/repositories/admin_actions.dart';
 import '../../../data/sync/app_data.dart';
 import '../../../data/sync/app_lookups.dart';
 import '../models/inbox_item.dart';
@@ -225,7 +226,11 @@ List<InboxItem> cancelledItems(AppData data, int now) {
     ..sort((a, b) => _cancelledAt(b).compareTo(_cancelledAt(a)));
 
   return orders.map((order) {
-    final label = order.status == 'expired' ? 'Time ran out' : 'Cancelled by customer';
+    final label = switch (order) {
+      Order(status: 'expired') => 'Time ran out',
+      Order(rejectReason: adminCancelReason) => adminCancelReason,
+      _ => 'Cancelled by customer',
+    };
     return _orderItem(
       data,
       order,

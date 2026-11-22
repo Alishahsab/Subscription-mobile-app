@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_tones.dart';
 import '../../../core/utils/code_rules.dart';
 import '../../../core/utils/format.dart';
+import '../../../core/utils/plan_check.dart';
+import '../../../core/widgets/app_sheet.dart';
 import '../../../data/models/order.dart';
 import '../../../data/repositories/admin_actions.dart';
 import '../../../data/sync/data_notifier.dart';
@@ -18,8 +20,23 @@ const _serverProblems = {
   'missing': 'This order no longer exists.',
 };
 
+Future<void> showPlanMismatch(BuildContext context, String problem) {
+  return showAppSheet<void>(
+    context,
+    title: "Plan doesn't match",
+    subtitle: problem,
+    builder: (context) => SheetButtons(label: 'OK', cancelLabel: 'Back', onConfirm: () => Navigator.pop(context)),
+  );
+}
+
 Future<void> showApproveDialog(BuildContext context, Order order, String customerName) {
-  return showDialog<void>(context: context, builder: (context) => _ApproveDialog(order: order, customerName: customerName));
+  final sender = order.senderName;
+  return showAppSheet<void>(
+    context,
+    title: 'Approve ${order.id}',
+    subtitle: [order.planName, formatMoney(order.amount), order.methodName, if (sender != null && sender.isNotEmpty) 'sender $sender'].join(' · '),
+    builder: (context) => _ApproveDialog(order: order, customerName: customerName),
+  );
 }
 
 class _ApproveDialog extends ConsumerStatefulWidget {
@@ -63,7 +80,6 @@ class _ApproveDialogState extends ConsumerState<_ApproveDialog> {
     final tones = context.tones;
     final data = ref.watch(dataProvider);
     final order = widget.order;
-    final sender = order.senderName;
 
     final found = findCode(_message);
     final codeFound = found.length == _codeLength;
@@ -71,20 +87,14 @@ class _ApproveDialogState extends ConsumerState<_ApproveDialog> {
     final hasMessage = _message.trim().isNotEmpty;
     final codeReady = code.length == _codeLength;
     final duplicate = codeReady ? findCodeAlreadySent(data, code) : null;
-    final canApprove = hasMessage && codeReady && duplicate == null && !_busy;
+    final wrongPlan = planMismatch(_message, order.planName);
+    final canApprove = hasMessage && codeReady && duplicate == null && wrongPlan == null && !_busy;
 
-    return AlertDialog(
-      alignment: Alignment.topCenter,
-      insetPadding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
-      title: const Text('Approve payment'),
-      scrollable: true,
-      content: Column(
+    return SingleChildScrollView(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${order.id} · ${order.planName}'),
-          Text(sender == null ? widget.customerName : '${widget.customerName} · $sender'),
-          const SizedBox(height: 16),
           TextField(
             autofocus: true,
             minLines: 4,
@@ -121,18 +131,16 @@ class _ApproveDialogState extends ConsumerState<_ApproveDialog> {
                 style: TextStyle(color: tones.redText, fontSize: 12.5),
               ),
             ),
+          if (wrongPlan != null) _RedBox(child: Text(wrongPlan, style: TextStyle(color: tones.redText, fontSize: 12.5))),
           if (_problem.isNotEmpty)
             _RedBox(child: Text(_problem, style: TextStyle(color: tones.redText, fontSize: 12.5))),
+          SheetButtons(
+            label: _busy ? 'Sending…' : 'Approve & send',
+            fill: Colors.green.shade600,
+            onConfirm: canApprove ? () => _approve(code) : null,
+          ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Colors.green.shade600),
-          onPressed: canApprove ? () => _approve(code) : null,
-          child: Text(_busy ? 'Sending…' : 'Approve & send'),
-        ),
-      ],
     );
   }
 }
