@@ -34,7 +34,7 @@ Future<void> showApproveDialog(BuildContext context, Order order, String custome
   return showAppSheet<void>(
     context,
     title: 'Approve ${order.id}',
-    subtitle: [order.planName, formatMoney(order.amount), order.methodName, if (sender != null && sender.isNotEmpty) 'sender $sender'].join(' · '),
+    subtitle: [order.planName, formatMoney(order.amount), order.methodName, if (sender != null && sender.isNotEmpty) 'Sender: $sender'].join(' · '),
     builder: (context) => _ApproveDialog(order: order, customerName: customerName),
   );
 }

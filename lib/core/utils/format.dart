@@ -59,6 +59,11 @@ String chatListTime(int time, int now) {
   return formatDate(time);
 }
 
+String cardTime(int time, int now) {
+  final day = chatListTime(time, now);
+  return pakistanDay(now) - pakistanDay(time) <= 0 ? day : '$day, ${formatTime(time)}';
+}
+
 String timeAgo(int time, int now) {
   final seconds = (now - time) ~/ 1000;
   if (seconds < 45) return 'just now';

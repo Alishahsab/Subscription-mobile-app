@@ -444,7 +444,7 @@ class _Summary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${bucket.title} · ${bucket.count} completed',
+            bucket.title,
             style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
