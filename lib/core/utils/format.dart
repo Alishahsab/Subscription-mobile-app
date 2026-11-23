@@ -52,16 +52,11 @@ String chatDayLabel(int time, int now) {
 String chatListTime(int time, int now) {
   final daysAgo = pakistanDay(now) - pakistanDay(time);
   if (daysAgo <= 0) return formatTime(time);
-  if (daysAgo == 1) return 'Yesterday';
+  if (daysAgo == 1) return 'Yesterday, ${formatTime(time)}';
 
   final date = _pakistan(time);
-  if (date.year == _pakistan(now).year) return '${date.day} ${_months[date.month - 1]}';
+  if (date.year == _pakistan(now).year) return '${date.day} ${_months[date.month - 1]}, ${formatTime(time)}';
   return formatDate(time);
-}
-
-String cardTime(int time, int now) {
-  final day = chatListTime(time, now);
-  return pakistanDay(now) - pakistanDay(time) <= 0 ? day : '$day, ${formatTime(time)}';
 }
 
 String timeAgo(int time, int now) {

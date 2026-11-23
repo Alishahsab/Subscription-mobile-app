@@ -117,7 +117,7 @@ class _TopRow extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Text(
-          cardTime(item.time, now),
+          chatListTime(item.time, now),
           style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 12, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w500),
         ),
         if (item.unread) ...[

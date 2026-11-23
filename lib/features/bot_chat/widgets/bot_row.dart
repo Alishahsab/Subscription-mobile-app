@@ -63,9 +63,13 @@ class BotRow extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        chatListTime(item.time, now),
-                        style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 10.5, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w600),
+                      Flexible(
+                        child: Text(
+                          chatListTime(item.time, now),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 10.5, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),

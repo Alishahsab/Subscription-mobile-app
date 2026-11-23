@@ -96,10 +96,9 @@ void main() {
     expect(formatTime(utcEvening), '9:41 PM');
     expect(formatDate(utcEvening), '30 Oct 2026');
     expect(formatDateTime(utcEvening), '30 Oct 2026, 9:41 PM');
-    expect(chatListTime(utcEvening, utcEvening + Duration.millisecondsPerDay), 'Yesterday');
-    expect(cardTime(utcEvening, utcEvening + 60000), '9:41 PM');
-    expect(cardTime(utcEvening, utcEvening + Duration.millisecondsPerDay), 'Yesterday, 9:41 PM');
-    expect(cardTime(utcEvening, utcEvening + 3 * Duration.millisecondsPerDay), '30 Oct, 9:41 PM');
+    expect(chatListTime(utcEvening, utcEvening + 60000), '9:41 PM');
+    expect(chatListTime(utcEvening, utcEvening + Duration.millisecondsPerDay), 'Yesterday, 9:41 PM');
+    expect(chatListTime(utcEvening, utcEvening + 3 * Duration.millisecondsPerDay), '30 Oct, 9:41 PM');
   });
 
   test('money and age labels read like the web', () {
