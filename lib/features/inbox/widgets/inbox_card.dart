@@ -23,6 +23,8 @@ import 'customer_avatar.dart';
 import 'reject_dialog.dart';
 import 'reply_dialog.dart';
 
+const _timeWidth = 120.0;
+
 const inboxColors = {
   'pending': Color(0xFF794983),
   'issues': Color(0xFFFFB02E),
@@ -116,9 +118,14 @@ class _TopRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          chatListTime(item.time, now),
-          style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 12, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w500),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _timeWidth),
+          child: Text(
+            chatListTime(item.time, now),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 12, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w500),
+          ),
         ),
         if (item.unread) ...[
           const SizedBox(width: 5),

@@ -11,6 +11,8 @@ import '../../inbox/controllers/inbox_lists.dart';
 import '../../inbox/models/inbox_item.dart';
 import '../../inbox/widgets/customer_avatar.dart';
 
+const _timeWidth = 110.0;
+
 class BotRow extends StatelessWidget {
   const BotRow({super.key, required this.item, required this.filter, required this.order, required this.unreadCount, required this.now});
 
@@ -63,7 +65,8 @@ class BotRow extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Flexible(
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: _timeWidth),
                         child: Text(
                           chatListTime(item.time, now),
                           maxLines: 1,
