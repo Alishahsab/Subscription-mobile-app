@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:premium_store_admin/core/utils/format.dart';
+import 'package:premium_store_admin/data/models/customer.dart';
 import 'package:premium_store_admin/data/models/db_row.dart';
+import 'package:premium_store_admin/data/models/order.dart';
 import 'package:premium_store_admin/data/repositories/admin_actions.dart';
 import 'package:premium_store_admin/data/sync/app_data.dart';
 import 'package:premium_store_admin/data/sync/db_table.dart';
 import 'package:premium_store_admin/data/sync/signal_notifier.dart';
 import 'package:premium_store_admin/features/inbox/controllers/inbox_lists.dart';
+import 'package:premium_store_admin/features/inbox/widgets/unused_code_parts.dart';
 
 const now = 1800000000000;
 
@@ -89,6 +92,27 @@ void main() {
     expect(findCodeAlreadySent(data, 'abc123')?.code, 'ABC123');
     expect(findCodeAlreadySent(data, 'XYZ789')?.customerEmail, 'c1@test.com');
     expect(findCodeAlreadySent(data, 'NEW456'), isNull);
+  });
+
+  test('a removed code can be sent again', () {
+    var data = const AppData().withAllRows(DbTable.customers, [customer('c1')]);
+    data = data.withAllRows(DbTable.orders, [{...order('A', 'completed', code: 'ABC123'), 'code_released': true}]);
+    data = data.withAllRows(DbTable.messages, [
+      {'id': 'm', 'customer_id': 'c1', 'sender': 'admin', 'kind': 'code', 'text': 'Your code is ABC123', 'created_at': now},
+    ]);
+
+    expect(findCodeAlreadySent(data, 'ABC123'), isNull);
+  });
+
+  test('unused codes count days against the plan and copy their details', () {
+    final sent = Order.fromRow({...order('A', 'completed', code: 'ABC123', unused: true), 'plan_name': '1 Month', 'reviewed_at': now - 31 * Duration.millisecondsPerDay, 'sender_name': 'Ali'});
+    final fresh = Order.fromRow({...order('B', 'completed', code: 'XYZ789', unused: true), 'plan_name': '3 Months', 'reviewed_at': now - 5 * Duration.millisecondsPerDay});
+
+    expect(planDays(sent), 30);
+    expect(planTimeOver(sent, now), isTrue);
+    expect(daysSinceSent(fresh, now), 5);
+    expect(planTimeOver(fresh, now), isFalse);
+    expect(codeDetails(sent, Customer.fromRow(customer('c1', whatsapp: '03001234567', number: 3898))), startsWith('#3898 · Ali · 03001234567\nCode: ABC123\nSent: '));
   });
 
   test('times show in Pakistan time', () {

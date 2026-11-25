@@ -13,6 +13,7 @@ import '../../../core/widgets/stored_image.dart';
 import '../../../data/models/order.dart';
 import '../../../data/models/ticket.dart';
 import '../../../data/repositories/admin_actions.dart';
+import '../../../data/repositories/image_repository.dart';
 import '../../../data/sync/app_lookups.dart';
 import '../../../data/sync/data_notifier.dart';
 import '../controllers/inbox_lists.dart';
@@ -22,6 +23,7 @@ import 'card_button.dart';
 import 'customer_avatar.dart';
 import 'reject_dialog.dart';
 import 'reply_dialog.dart';
+import 'unused_code_parts.dart';
 
 const _timeWidth = 120.0;
 
@@ -70,14 +72,20 @@ class InboxCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _TopRow(item: item, now: now),
-            if (tab != 'blocked') ...[
-              const SizedBox(height: 10),
-              _DetailRow(tab: tab, item: item, order: order, ticket: ticket),
-            ],
-            _NoteRow(tab: tab, item: item, order: order),
+            _TopRow(
+              item: item,
+              now: now,
+              trailing: tab == 'unused' && order != null
+                  ? CopyDetailsButton(
+                      details: codeDetails(order, ref.watch(dataProvider.select((data) => data.customer(item.customerId)))),
+                      onCopied: () => showDone(context, 'Copied ${order.code} details'),
+                    )
+                  : null,
+            ),
+            if (tab != 'blocked') ...[const SizedBox(height: 10), _DetailRow(tab: tab, item: item, order: order, ticket: ticket)],
+            _NoteRow(tab: tab, item: item, order: order, now: now),
             const SizedBox(height: 12),
-            _Actions(tab: tab, item: item, order: order, ticket: ticket, onOpenChat: () => _openChat(context)),
+            _Actions(tab: tab, item: item, order: order, ticket: ticket, now: now, onOpenChat: () => _openChat(context)),
           ],
         ),
       ),
@@ -86,10 +94,11 @@ class InboxCard extends ConsumerWidget {
 }
 
 class _TopRow extends StatelessWidget {
-  const _TopRow({required this.item, required this.now});
+  const _TopRow({required this.item, required this.now, this.trailing});
 
   final InboxItem item;
   final int now;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -118,15 +127,18 @@ class _TopRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _timeWidth),
-          child: Text(
-            chatListTime(item.time, now),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 12, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w500),
+        if (trailing != null)
+          trailing!
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _timeWidth),
+            child: Text(
+              chatListTime(item.time, now),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: item.unread ? tones.title : tones.faint, fontSize: 12, fontWeight: item.unread ? FontWeight.w700 : FontWeight.w500),
+            ),
           ),
-        ),
         if (item.unread) ...[
           const SizedBox(width: 5),
           Container(
@@ -193,11 +205,12 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _NoteRow extends StatelessWidget {
-  const _NoteRow({required this.tab, required this.item, required this.order});
+  const _NoteRow({required this.tab, required this.item, required this.order, required this.now});
 
   final String tab;
   final InboxItem item;
   final Order? order;
+  final int now;
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +219,9 @@ class _NoteRow extends StatelessWidget {
     final current = order;
 
     Widget? note;
-    if (tab == 'blocked') {
+    if (tab == 'unused' && current != null) {
+      note = UnusedCodeAge(order: current, now: now);
+    } else if (tab == 'blocked') {
       note = _Pill(text: item.subtitle, fill: tones.redFill, color: tones.redText);
     } else if (current?.status == 'rejected') {
       note = Text('Rejected: ${current?.rejectReason}', style: TextStyle(color: tones.amberText, fontSize: 12.5, height: 1.3));
@@ -217,19 +232,20 @@ class _NoteRow extends StatelessWidget {
 
     if (note == null) return const SizedBox();
     return Padding(
-      padding: EdgeInsets.only(top: tab == 'blocked' ? 10 : 2),
+      padding: EdgeInsets.only(top: tab == 'blocked' || tab == 'unused' ? 10 : 2),
       child: Align(alignment: Alignment.centerLeft, child: note),
     );
   }
 }
 
 class _Actions extends ConsumerWidget {
-  const _Actions({required this.tab, required this.item, required this.order, required this.ticket, required this.onOpenChat});
+  const _Actions({required this.tab, required this.item, required this.order, required this.ticket, required this.now, required this.onOpenChat});
 
   final String tab;
   final InboxItem item;
   final Order? order;
   final Ticket? ticket;
+  final int now;
   final VoidCallback onOpenChat;
 
   @override
@@ -309,6 +325,24 @@ class _Actions extends ConsumerWidget {
                   onConfirm: () => markUnused(true),
                 ),
               ),
+      if (tab == 'unused' && current != null && planTimeOver(current, now))
+        CardButton(
+          large: true,
+          label: 'Remove',
+          fill: tones.redFill,
+          text: tones.redText,
+          onTap: () => showConfirmDialog(
+            context,
+            title: 'Remove ${current.code}?',
+            description: 'It leaves Unused codes and can be sent to another customer.',
+            confirmLabel: 'Yes, remove',
+            danger: true,
+            onConfirm: () {
+              actions.releaseCode(current);
+              showDone(context, '${current.code} removed. It can be sent again.');
+            },
+          ),
+        ),
       if (tab == 'unused' && current != null)
         CardButton(
           large: true,
@@ -350,11 +384,25 @@ class _Actions extends ConsumerWidget {
   }
 }
 
-class _ScreenshotButton extends StatelessWidget {
+class _ScreenshotButton extends ConsumerStatefulWidget {
   const _ScreenshotButton({required this.path, required this.title});
 
   final String path;
   final String title;
+
+  @override
+  ConsumerState<_ScreenshotButton> createState() => _ScreenshotButtonState();
+}
+
+class _ScreenshotButtonState extends ConsumerState<_ScreenshotButton> {
+  String get path => widget.path;
+  String get title => widget.title;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(imageRepositoryProvider).download(path);
+  }
 
   void _open(BuildContext context) {
     showAppSheet<void>(

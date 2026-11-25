@@ -62,6 +62,8 @@ class _PictureState extends ConsumerState<_Picture> {
   ImageRepository get _images => ref.read(imageRepositoryProvider);
 
   Future<ImageProvider?> _load() async {
+    final ready = _images.downloaded(widget.path);
+    if (ready != null) return MemoryImage(ready);
     if (!_download) {
       final url = await _images.urlFor(widget.path);
       if (url != null) return NetworkImage(url);

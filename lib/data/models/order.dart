@@ -12,6 +12,7 @@ class Order {
     required this.createdAt,
     required this.expiresAt,
     required this.codeUnused,
+    this.codeReleased = false,
     this.bankName,
     this.accountTitle,
     this.accountNumber,
@@ -46,6 +47,7 @@ class Order {
   final String? rejectReason;
   final String? code;
   final bool codeUnused;
+  final bool codeReleased;
 
   factory Order.fromRow(DbRow row) {
     return Order(
@@ -70,6 +72,7 @@ class Order {
       rejectReason: row['reject_reason'] as String?,
       code: row['code'] as String?,
       codeUnused: row['code_unused'] == true,
+      codeReleased: row['code_released'] == true,
     );
   }
 
@@ -96,6 +99,7 @@ class Order {
       'reject_reason': rejectReason,
       'code': code,
       'code_unused': codeUnused,
+      'code_released': codeReleased,
     };
   }
 }

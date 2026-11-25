@@ -171,7 +171,7 @@ class _DetailsHeader extends StatelessWidget {
                   ),
                 ),
               Text(customer.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: colors.onSurface, fontSize: 13)),
-              Text('Customer since ${formatDate(customer.createdAt)}', style: TextStyle(color: tones.faint, fontSize: 11.5)),
+              Text('Customer since ${formatDateTime(customer.createdAt)}', style: TextStyle(color: tones.faint, fontSize: 11.5)),
             ],
           ),
         ),

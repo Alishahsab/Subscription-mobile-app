@@ -22,7 +22,8 @@ import 'seen_versions.dart';
 import 'server_clock.dart';
 
 const _refreshEvery = Duration(minutes: 1);
-const _loadRetry = Duration(seconds: 5);
+const _loadRetry = Duration(seconds: 3);
+const _tokenMargin = Duration(minutes: 1);
 const _reconnectDelay = Duration(seconds: 3);
 const _saveDelay = Duration(milliseconds: 1500);
 const _fullLoadEvery = Duration(hours: 24);
@@ -220,8 +221,19 @@ class SyncService with WidgetsBindingObserver {
     }
     if (state == AppLifecycleState.resumed && _hiddenSince != null) {
       _hiddenSince = null;
-      catchUp();
+      unawaited(_catchUpAfterResume());
     }
+  }
+
+  Future<void> _catchUpAfterResume() async {
+    final expiresAt = _client.auth.currentSession?.expiresAt;
+    final expiresSoon = expiresAt != null && expiresAt * 1000 - DateTime.now().millisecondsSinceEpoch < _tokenMargin.inMilliseconds;
+    if (expiresSoon) {
+      try {
+        await _client.auth.refreshSession();
+      } catch (_) {}
+    }
+    await catchUp();
   }
 
   bool get _fullLoadIsRecent {

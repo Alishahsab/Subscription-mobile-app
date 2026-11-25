@@ -9,6 +9,11 @@ Set<int> _mentionedMonths(String text) {
   }).toSet();
 }
 
+int? planMonths(String planName) {
+  final months = _mentionedMonths(planName);
+  return months.length == 1 ? months.first : null;
+}
+
 String _monthsLabel(int months) => '$months Month${months == 1 ? '' : 's'}';
 
 String? planMismatch(String text, String planName) {

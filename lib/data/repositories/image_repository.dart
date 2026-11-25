@@ -46,6 +46,8 @@ class ImageRepository {
     return url;
   }
 
+  Uint8List? downloaded(String path) => _downloads[path];
+
   Future<Uint8List?> download(String path) async {
     final cached = _downloads[path];
     if (cached != null) return cached;

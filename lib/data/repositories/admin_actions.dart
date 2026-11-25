@@ -36,16 +36,17 @@ SentCode? findCodeAlreadySent(AppData data, String text) {
   final codes = lowerCaseCodesIn(text);
   if (codes.isEmpty) return null;
 
+  final released = {for (final order in data.orders) if (order.codeReleased && order.code != null) order.code!.toLowerCase()};
   for (final order in data.orders) {
     final code = order.code;
-    if (code != null && codes.contains(code.toLowerCase())) {
+    if (code != null && !order.codeReleased && codes.contains(code.toLowerCase())) {
       return SentCode(code, data.customer(order.customerId)?.email ?? 'Customer', order.reviewedAt ?? order.createdAt);
     }
   }
 
   for (final message in data.messages) {
     if (message.sender != 'admin' || message.kind == 'deleted') continue;
-    final repeated = lowerCaseCodesIn(message.text).where(codes.contains).firstOrNull;
+    final repeated = lowerCaseCodesIn(message.text).where((code) => codes.contains(code) && !released.contains(code)).firstOrNull;
     if (repeated != null) {
       return SentCode(repeated.toUpperCase(), data.customer(message.customerId)?.email ?? 'Customer', message.createdAt);
     }
@@ -108,6 +109,10 @@ class AdminActions {
 
   void setCodeUnused(Order order, bool unused) {
     _sync.update(DbTable.orders, order.id, {'code_unused': unused});
+  }
+
+  void releaseCode(Order order) {
+    _sync.update(DbTable.orders, order.id, {'code_unused': false, 'code_released': true});
   }
 
   void resolveTicket(Ticket ticket) {
