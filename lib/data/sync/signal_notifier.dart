@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../../core/config/app_config.dart';
 
-const _pingEvery = Duration(seconds: 10);
+const _pingEvery = Duration(seconds: 30);
 const _timeout = Duration(seconds: 8);
 const _failuresBeforeOffline = 2;
 
@@ -52,7 +52,7 @@ class SignalNotifier extends Notifier<Signal> with WidgetsBindingObserver {
   }
 
   Future<void> _ping() async {
-    if (_pinging || WidgetsBinding.instance.lifecycleState == AppLifecycleState.paused) return;
+    if (_pinging || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
     _pinging = true;
 
     final watch = Stopwatch()..start();

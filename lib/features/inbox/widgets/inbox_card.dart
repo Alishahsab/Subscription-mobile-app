@@ -13,7 +13,6 @@ import '../../../core/widgets/stored_image.dart';
 import '../../../data/models/order.dart';
 import '../../../data/models/ticket.dart';
 import '../../../data/repositories/admin_actions.dart';
-import '../../../data/repositories/image_repository.dart';
 import '../../../data/sync/app_lookups.dart';
 import '../../../data/sync/data_notifier.dart';
 import '../controllers/inbox_lists.dart';
@@ -165,7 +164,8 @@ class _DetailRow extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final current = order;
     final issue = ticket;
-    final code = (tab == 'completed' || tab == 'unused') ? current?.code : null;
+    final removed = current?.codeReleased ?? false;
+    final code = (tab == 'completed' || tab == 'unused') && !removed ? current?.code : null;
     final screenshot = (tab == 'pending' || tab == 'issues') ? (current?.screenshot ?? issue?.screenshot) : null;
     final muted = TextStyle(color: colors.onSurfaceVariant, fontSize: 13.5);
 
@@ -192,7 +192,7 @@ class _DetailRow extends StatelessWidget {
         else if (current != null) ...[
           Text(current.planName, style: muted),
           if (code != null) ...[const SizedBox(width: 8), _CodeChip(code: code)],
-          if (tab == 'completed' && code == null) ...[const SizedBox(width: 8), Text('Code not sent yet', style: muted)],
+          if (tab == 'completed' && code == null) ...[const SizedBox(width: 8), Text(removed ? 'Code removed' : 'Code not sent yet', style: muted)],
           const Spacer(),
         ] else
           Expanded(
@@ -309,7 +309,7 @@ class _Actions extends ConsumerWidget {
           ),
         ),
       ],
-      if (tab == 'completed' && current != null)
+      if (tab == 'completed' && current != null && !current.codeReleased)
         current.code == null
             ? CardButton(large: true, label: 'Open chat to send code', fill: tones.softFill, text: tones.softText, onTap: onOpenChat)
             : CardButton(
@@ -384,25 +384,11 @@ class _Actions extends ConsumerWidget {
   }
 }
 
-class _ScreenshotButton extends ConsumerStatefulWidget {
+class _ScreenshotButton extends StatelessWidget {
   const _ScreenshotButton({required this.path, required this.title});
 
   final String path;
   final String title;
-
-  @override
-  ConsumerState<_ScreenshotButton> createState() => _ScreenshotButtonState();
-}
-
-class _ScreenshotButtonState extends ConsumerState<_ScreenshotButton> {
-  String get path => widget.path;
-  String get title => widget.title;
-
-  @override
-  void initState() {
-    super.initState();
-    ref.read(imageRepositoryProvider).download(path);
-  }
 
   void _open(BuildContext context) {
     showAppSheet<void>(

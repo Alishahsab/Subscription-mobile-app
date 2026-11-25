@@ -33,6 +33,7 @@ class OrderReviewCard extends ConsumerWidget {
   final String customerName;
 
   (Color, Color) _chipColors(AppTones tones) {
+    if (order.codeReleased) return (tones.neutralFill, tones.neutralText);
     switch (order.status) {
       case 'completed':
         return (tones.greenChip, tones.greenChipText);
@@ -83,7 +84,7 @@ class OrderReviewCard extends ConsumerWidget {
     return ReviewCard(
       heading: pending ? 'Pending order' : 'Completed order',
       title: order.id,
-      chip: _statusLabels[order.status] ?? order.status,
+      chip: order.codeReleased ? 'Code removed' : _statusLabels[order.status] ?? order.status,
       chipFill: chipFill,
       chipText: chipText,
       children: [
@@ -104,7 +105,7 @@ class OrderReviewCard extends ConsumerWidget {
           ReviewRow(label: 'Code sent', value: codeSentAt == null ? 'Not sent yet' : formatDateTime(codeSentAt))
         else
           ReviewRow(label: 'Submitted', value: submittedAt == null ? 'Not sent yet' : formatDateTime(submittedAt)),
-        if (code != null) ReviewRow(label: 'Code', value: code, strong: true),
+        if (code != null && !order.codeReleased) ReviewRow(label: 'Code', value: code, strong: true),
         if (order.status == 'rejected')
           ReviewNote(
             text: 'Rejected: ${order.rejectReason}. The customer can reply once and can’t place a new order until you approve or cancel this one.',
@@ -137,7 +138,7 @@ class OrderReviewCard extends ConsumerWidget {
             fill: tones.greenFill,
             ink: tones.greenText,
           ),
-        if (completed && code != null)
+        if (completed && code != null && !order.codeReleased)
           ReviewButton(
             label: order.codeUnused ? 'Mark as used' : 'Mark as unused',
             fill: order.codeUnused ? tones.violetFill : tones.softFill,
